@@ -1,0 +1,201 @@
+.container {
+  min-height: 100vh;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.header p {
+  color: #666;
+  font-size: 1rem;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.controlPanel,
+.statusPanel,
+.jobsPanel {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.controlPanel h2,
+.statusPanel h2,
+.jobsPanel h2 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  color: #333;
+  border-bottom: 2px solid #2196F3;
+  padding-bottom: 10px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.button {
+  padding: 12px 24px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #2196F3;
+  color: white;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #1976D2;
+}
+
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.buttonStop {
+  background-color: #F44336;
+}
+
+.buttonStop:hover:not(:disabled) {
+  background-color: #D32F2F;
+}
+
+.buttonRefresh {
+  background-color: #4CAF50;
+}
+
+.buttonRefresh:hover:not(:disabled) {
+  background-color: #388E3C;
+}
+
+.message {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #E3F2FD;
+  border-left: 4px solid #2196F3;
+  border-radius: 4px;
+  color: #1976D2;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statusItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+}
+
+.label {
+  font-weight: 500;
+  color: #666;
+}
+
+.value {
+  font-weight: 600;
+  color: #333;
+}
+
+.jobsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.jobItem {
+  padding: 16px;
+  background-color: #F5F5F5;
+  border-radius: 6px;
+  border-left: 4px solid #2196F3;
+}
+
+.jobHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.jobId {
+  font-weight: 600;
+  color: #333;
+}
+
+.jobStatus {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.jobDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.errorMessage {
+  grid-column: 1 / -1;
+  padding: 8px;
+  background-color: #FFEBEE;
+  border-radius: 4px;
+  color: #C62828;
+  margin-top: 8px;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+
+  .jobDetails {
+    grid-template-columns: 1fr;
+  }
+}
