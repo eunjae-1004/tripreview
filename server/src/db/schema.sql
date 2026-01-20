@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS companies (
   email VARCHAR(255),
   phone VARCHAR(50),
   manager VARCHAR(100),
+  naver_url TEXT, -- 네이버맵 URL (예: https://map.naver.com/p/entry/place/11658902)
+  kakao_url TEXT, -- 카카오맵 URL
+  yanolja_url TEXT, -- 야놀자 URL
+  goodchoice_url TEXT, -- 굿초이스 URL
+  google_url TEXT, -- 구글 URL
+  tripadvisor_url TEXT, -- 트립어드바이저 URL
+  agoda_url TEXT, -- 아고다 URL
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -19,6 +26,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   company_name VARCHAR(255) NOT NULL,
   review_date DATE NOT NULL,
   content TEXT,
+  title VARCHAR(500), -- 리뷰 제목
+  additional_info TEXT, -- 추가 정보
   rating DECIMAL(3, 2), -- 평점
   nickname VARCHAR(100) NOT NULL,
   visit_keyword VARCHAR(255), -- 방문키워드
@@ -31,8 +40,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   n_char_count INTEGER, -- 종합 분석 글자수
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  -- 중복 방지를 위한 유니크 제약조건 (호텔명, 날짜, 닉네임)
-  UNIQUE(company_name, review_date, nickname)
+  -- 중복 방지를 위한 유니크 제약조건 (호텔명, 날짜, 닉네임, 포털)
+  UNIQUE(company_name, review_date, nickname, portal_url)
 );
 
 -- 스크래핑 작업 로그 테이블
@@ -53,3 +62,4 @@ CREATE INDEX IF NOT EXISTS idx_reviews_company_name ON reviews(company_name);
 CREATE INDEX IF NOT EXISTS idx_reviews_review_date ON reviews(review_date);
 CREATE INDEX IF NOT EXISTS idx_reviews_portal_url ON reviews(portal_url);
 CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies(company_name);
+CREATE INDEX IF NOT EXISTS idx_companies_naver_url ON companies(naver_url) WHERE naver_url IS NOT NULL;

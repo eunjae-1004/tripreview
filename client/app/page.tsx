@@ -18,12 +18,36 @@ interface Job {
   created_at: string;
 }
 
+interface Company {
+  id: number;
+  company_name: string;
+  type: string;
+  is_member: string;
+  naver_url: string | null;
+  kakao_url: string | null;
+  yanolja_url: string | null;
+  agoda_url: string | null;
+  google_url: string | null;
+}
+
+interface Statistics {
+  totalReviews: number;
+  byPortal: Array<{ portal_url: string; count: string }>;
+  byCompany: Array<{ company_name: string; count: string }>;
+  byCompanyAndPortal: Array<{ company_name: string; portal_url: string; count: string }>;
+}
+
+type DateFilter = 'all' | 'week';
+
 export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
   const [currentJob, setCurrentJob] = useState<Job | null>(null);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<DateFilter>('week');
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [statistics, setStatistics] = useState<Statistics | null>(null);
 
   // 상태 조회
   const fetchStatus = async () => {
@@ -56,6 +80,36 @@ export default function Home() {
     }
   };
 
+  // 기업 목록 조회
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/companies`, {
+        headers: {
+          'x-admin-secret': ADMIN_SECRET,
+        },
+      });
+      const data = await response.json();
+      setCompanies(data);
+    } catch (error) {
+      console.error('기업 목록 조회 실패:', error);
+    }
+  };
+
+  // 통계 조회
+  const fetchStatistics = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/statistics`, {
+        headers: {
+          'x-admin-secret': ADMIN_SECRET,
+        },
+      });
+      const data = await response.json();
+      setStatistics(data);
+    } catch (error) {
+      console.error('통계 조회 실패:', error);
+    }
+  };
+
   // 작업 시작
   const handleStart = async () => {
     setLoading(true);
@@ -67,10 +121,14 @@ export default function Home() {
           'Content-Type': 'application/json',
           'x-admin-secret': ADMIN_SECRET,
         },
+        body: JSON.stringify({
+          dateFilter: dateFilter, // 'all' 또는 'week'
+        }),
       });
       const data = await response.json();
       if (response.ok) {
-        setMessage('스크래핑 작업이 시작되었습니다.');
+        const filterText = dateFilter === 'all' ? '전체' : '일주일 간격';
+        setMessage(`스크래핑 작업이 시작되었습니다. (${filterText})`);
         setTimeout(() => {
           fetchStatus();
           fetchRecentJobs();
@@ -120,11 +178,14 @@ export default function Home() {
   useEffect(() => {
     fetchStatus();
     fetchRecentJobs();
+    fetchCompanies();
+    fetchStatistics();
 
     // 5초마다 상태 업데이트
     const interval = setInterval(() => {
       fetchStatus();
       fetchRecentJobs();
+      fetchStatistics();
     }, 5000);
 
     return () => clearInterval(interval);
@@ -165,6 +226,43 @@ export default function Home() {
         {/* 제어 패널 */}
         <section className={styles.controlPanel}>
           <h2>작업 제어</h2>
+          
+          {/* 날짜 필터 선택 */}
+          <div className={styles.filterSection}>
+            <label className={styles.filterLabel}>리뷰 기간 선택:</label>
+            <div className={styles.radioGroup}>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="dateFilter"
+                  value="all"
+                  checked={dateFilter === 'all'}
+                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+                  disabled={loading || isRunning}
+                  className={styles.radioInput}
+                />
+                <span>전체</span>
+              </label>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="dateFilter"
+                  value="week"
+                  checked={dateFilter === 'week'}
+                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+                  disabled={loading || isRunning}
+                  className={styles.radioInput}
+                />
+                <span>일주일 간격</span>
+              </label>
+            </div>
+            <p className={styles.filterDescription}>
+              {dateFilter === 'all' 
+                ? '모든 리뷰를 수집합니다.' 
+                : '오늘 기준 일주일 이내의 리뷰만 수집합니다.'}
+            </p>
+          </div>
+
           <div className={styles.controls}>
             <button
               onClick={handleStart}
@@ -184,6 +282,8 @@ export default function Home() {
               onClick={() => {
                 fetchStatus();
                 fetchRecentJobs();
+                fetchCompanies();
+                fetchStatistics();
               }}
               disabled={loading}
               className={`${styles.button} ${styles.buttonRefresh}`}
@@ -251,6 +351,100 @@ export default function Home() {
               </>
             )}
           </div>
+        </section>
+
+        {/* 통계 */}
+        {statistics && (
+          <section className={styles.statisticsPanel}>
+            <h2>리뷰 통계</h2>
+            <div className={styles.statisticsGrid}>
+              <div className={styles.statCard}>
+                <div className={styles.statLabel}>전체 리뷰</div>
+                <div className={styles.statValue}>{statistics.totalReviews.toLocaleString()}</div>
+              </div>
+              {statistics.byPortal.map((portal) => (
+                <div key={portal.portal_url} className={styles.statCard}>
+                  <div className={styles.statLabel}>{portal.portal_url}</div>
+                  <div className={styles.statValue}>{parseInt(portal.count).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 기업 목록 */}
+        <section className={styles.companiesPanel}>
+          <h2>기업 목록 ({companies.length}개)</h2>
+          {companies.length === 0 ? (
+            <p className={styles.empty}>등록된 기업이 없습니다.</p>
+          ) : (
+            <div className={styles.companiesList}>
+              {companies.map((company) => {
+                const companyStats = statistics?.byCompanyAndPortal.filter(
+                  (s) => s.company_name === company.company_name
+                ) || [];
+                const totalCompanyReviews = companyStats.reduce(
+                  (sum, s) => sum + parseInt(s.count),
+                  0
+                );
+
+                return (
+                  <div key={company.id} className={styles.companyItem}>
+                    <div className={styles.companyHeader}>
+                      <h3>{company.company_name}</h3>
+                      <span className={styles.companyType}>{company.type}</span>
+                    </div>
+                    <div className={styles.companyInfo}>
+                      <div className={styles.portalUrls}>
+                        <div className={styles.portalItem}>
+                          <span className={styles.portalLabel}>네이버맵:</span>
+                          <span className={styles.portalStatus}>
+                            {company.naver_url ? '✅' : '❌'}
+                          </span>
+                        </div>
+                        <div className={styles.portalItem}>
+                          <span className={styles.portalLabel}>카카오맵:</span>
+                          <span className={styles.portalStatus}>
+                            {company.kakao_url ? '✅' : '❌'}
+                          </span>
+                        </div>
+                        <div className={styles.portalItem}>
+                          <span className={styles.portalLabel}>야놀자:</span>
+                          <span className={styles.portalStatus}>
+                            {company.yanolja_url ? '✅' : '❌'}
+                          </span>
+                        </div>
+                        <div className={styles.portalItem}>
+                          <span className={styles.portalLabel}>아고다:</span>
+                          <span className={styles.portalStatus}>
+                            {company.agoda_url ? '✅' : '❌'}
+                          </span>
+                        </div>
+                        <div className={styles.portalItem}>
+                          <span className={styles.portalLabel}>구글:</span>
+                          <span className={styles.portalStatus}>
+                            {company.google_url ? '✅' : '❌'}
+                          </span>
+                        </div>
+                      </div>
+                      {totalCompanyReviews > 0 && (
+                        <div className={styles.companyReviews}>
+                          <strong>저장된 리뷰: {totalCompanyReviews}개</strong>
+                          <div className={styles.portalBreakdown}>
+                            {companyStats.map((stat) => (
+                              <span key={stat.portal_url} className={styles.portalStat}>
+                                {stat.portal_url}: {stat.count}개
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* 최근 작업 목록 */}

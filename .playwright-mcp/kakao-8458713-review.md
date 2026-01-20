@@ -1,0 +1,1322 @@
+### Page state
+- Page URL: https://place.map.kakao.com/8458713#review
+- Page Title: 오색그린야드호텔 | 카카오맵
+- Page Snapshot:
+```yaml
+- generic [active] [ref=e1]:
+  - generic:
+    - link "본문 바로가기" [ref=e2] [cursor=pointer]:
+      - /url: "#mainContent"
+    - link "메뉴 바로가기" [ref=e3] [cursor=pointer]:
+      - /url: "#gnbContent"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - heading "kakaomap" [level=1] [ref=e7]:
+          - link "kakaomap" [ref=e8] [cursor=pointer]:
+            - /url: "#"
+            - img "kakaomap" [ref=e9]
+        - heading "오색그린야드호텔" [level=2] [ref=e40]:
+          - link "오색그린야드호텔" [ref=e41] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e10]:
+          - generic [ref=e13]:
+            - generic [ref=e14]:
+              - generic: 지도 검색
+              - textbox "지도 검색" [ref=e15]
+              - button "검색" [ref=e17] [cursor=pointer]:
+                - generic [ref=e18]: 검색
+            - blockquote
+          - link "로그인" [ref=e20] [cursor=pointer]:
+            - /url: "#"
+    - main [ref=e21]:
+      - heading "카카오맵 본문" [level=2]
+      - article [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - heading "장소명 오색그린야드호텔" [level=3] [ref=e46]:
+                - generic: 장소명
+                - text: 오색그린야드호텔
+              - generic [ref=e48]:
+                - generic: 장소 카테고리
+                - text: 호텔
+            - generic [ref=e49]:
+              - link "별점 3.4" [ref=e51] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e52]:
+                  - generic: 별점
+                  - generic [ref=e53]: "3.4"
+              - link "후기 81 개" [ref=e57] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e58]: 후기
+                - generic [ref=e59]:
+                  - text: "81"
+                  - generic: 개
+              - link "블로그 141 개" [ref=e62] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e63]: 블로그
+                - generic [ref=e64]:
+                  - text: "141"
+                  - generic: 개
+            - generic [ref=e66]:
+              - generic [ref=e67]: 영업 중
+              - generic [ref=e68]: 24시간 영업
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - button "로드뷰" [ref=e72] [cursor=pointer]:
+                - generic [ref=e74]: 로드뷰
+              - button "공유" [ref=e75] [cursor=pointer]:
+                - generic [ref=e77]: 공유
+              - button "지도" [ref=e78] [cursor=pointer]:
+                - generic [ref=e80]: 지도
+              - button "즐겨찾기" [ref=e81] [cursor=pointer]:
+                - generic [ref=e83]: 즐겨찾기
+            - generic [ref=e84]:
+              - button "출발" [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: 출발
+              - button "도착" [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: 도착
+          - generic [ref=e90]:
+            - link [ref=e92] [cursor=pointer]:
+              - /url: "#"
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - link [ref=e96] [cursor=pointer]:
+                  - /url: "#"
+                - link [ref=e98] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=e99]:
+                - link [ref=e101] [cursor=pointer]:
+                  - /url: "#"
+                - link "업로드 된 사진 수 999+" [ref=e103] [cursor=pointer]:
+                  - /url: "#"
+                  - generic [ref=e104]:
+                    - generic [ref=e105]: 업로드 된 사진 수
+                    - generic [ref=e106]: 999+
+          - generic [ref=e107]:
+            - link "예약" [ref=e109] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e111]: 예약
+            - link "추가 전 채널" [ref=e113] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e114]: 추가 전
+              - generic [ref=e115]: 채널
+        - generic [ref=e116]:
+          - tablist [ref=e119]:
+            - tab "홈" [ref=e120] [cursor=pointer]
+            - tab "사진" [ref=e121] [cursor=pointer]
+            - tab "후기" [selected] [ref=e122] [cursor=pointer]
+            - tab "예약" [ref=e123] [cursor=pointer]
+            - tab "혜택・소식" [ref=e124] [cursor=pointer]
+            - tab "블로그" [ref=e125] [cursor=pointer]
+            - tab "랭킹" [ref=e126] [cursor=pointer]
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - heading "방문 후기를 남겨주세요!" [level=4] [ref=e129]
+              - link [ref=e130] [cursor=pointer]:
+                - /url: "#"
+              - generic [ref=e138]:
+                - text: 사진/영상 등록
+                - emphasis [ref=e139]: 3점,
+                - text: 글 작성
+                - emphasis [ref=e140]: 2점
+            - generic [ref=e141]:
+              - heading "전체 후기/평점" [level=4]
+              - generic [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - generic: 별점
+                    - generic [ref=e145]: "3.4"
+                  - link "후기 81" [ref=e148] [cursor=pointer]:
+                    - /url: "#"
+                    - strong [ref=e149]: 후기 81
+                - generic [ref=e150]:
+                  - list [ref=e151]:
+                    - listitem [ref=e152]:
+                      - generic [ref=e153]:
+                        - img "가격" [ref=e154]
+                        - generic [ref=e155]: 가격
+                      - generic [ref=e156]: 16명
+                    - listitem [ref=e157]:
+                      - generic [ref=e158]:
+                        - img "시설" [ref=e159]
+                        - generic [ref=e160]: 시설
+                      - generic [ref=e161]: 15명
+                    - listitem [ref=e162]:
+                      - generic [ref=e163]:
+                        - img "뷰" [ref=e164]
+                        - generic [ref=e165]: 뷰
+                      - generic [ref=e166]: 13명
+                    - listitem [ref=e167]:
+                      - generic [ref=e168]:
+                        - img [ref=e169]
+                        - generic [ref=e170]: 주차
+                      - generic [ref=e171]: 13명
+                    - listitem [ref=e172]:
+                      - generic [ref=e173]:
+                        - img [ref=e174]
+                        - generic [ref=e175]: 청결
+                      - generic [ref=e176]: 13명
+                  - button [expanded] [ref=e178] [cursor=pointer]
+              - generic [ref=e181]:
+                - button "유용한 순" [ref=e183] [cursor=pointer]:
+                  - strong [ref=e184]: 유용한 순
+                - generic [ref=e187]:
+                  - checkbox "사진/영상 후기만 보기" [ref=e188] [cursor=pointer]
+                  - generic [ref=e191] [cursor=pointer]: 사진/영상 후기만 보기
+              - generic [ref=e192]:
+                - strong: 후기 목록
+                - list [ref=e193]:
+                  - listitem [ref=e194]:
+                    - generic [ref=e195]:
+                      - generic [ref=e196]:
+                        - link [ref=e197] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e199]
+                        - generic [ref=e200]:
+                          - generic [ref=e201]:
+                            - link "리뷰어 이름, 미슐랭처럼~ㅎ 블루 레벨 레벨 67" [ref=e202] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e203]:
+                                - generic: 리뷰어 이름,
+                                - text: 미슐랭처럼~ㅎ
+                              - generic [ref=e204]:
+                                - generic [ref=e205]: 블루 레벨
+                                - generic [ref=e206]:
+                                  - generic: 레벨
+                                  - text: "67"
+                            - generic [ref=e207]:
+                              - list:
+                                - listitem [ref=e208]: 후기 687
+                                - listitem [ref=e209]: 별점평균 4.2
+                                - listitem [ref=e210]: 팔로워 110
+                          - button "메뉴 더보기" [ref=e212] [cursor=pointer]:
+                            - generic [ref=e213]: 메뉴 더보기
+                      - generic [ref=e215]:
+                        - generic [ref=e216]:
+                          - generic [ref=e217]:
+                            - generic [ref=e218]:
+                              - generic: 별점
+                              - generic: "4.0"
+                            - generic [ref=e224]: 2025.06.07.
+                            - generic [ref=e225]:
+                              - generic [ref=e226]:
+                                - img "가격" [ref=e227]
+                                - text: 가격
+                              - generic [ref=e228]:
+                                - img "시설" [ref=e229]
+                                - text: 시설
+                              - button "+1" [ref=e230] [cursor=pointer]
+                          - link "자연용출 탄산온천 오색그린야드호텔 추천드립니다. 시설관리 또한 오랫동안 잘 유지 관리되어 컨디션도 나쁘지 않아요.... 더보기" [ref=e232] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e233]: 자연용출 탄산온천 오색그린야드호텔 추천드립니다. 시설관리 또한 오랫동안 잘 유지 관리되어 컨디션도 나쁘지 않아요.... 더보기
+                        - generic [ref=e236]:
+                          - strong: 사진 목록
+                          - list [ref=e237]:
+                            - listitem [ref=e238]:
+                              - link "근처 사진" [ref=e239] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e241]
+                                - generic [ref=e242]: 근처 사진
+                            - listitem [ref=e243]:
+                              - link "근처 사진" [ref=e244] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e246]
+                                - generic [ref=e247]: 근처 사진
+                            - listitem [ref=e248]:
+                              - link "근처 사진" [ref=e249] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e251]
+                                - generic [ref=e252]: 근처 사진
+                            - listitem [ref=e253]:
+                              - link "근처 사진" [ref=e254] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e256]
+                                - generic [ref=e257]: 근처 사진
+                            - listitem [ref=e258]:
+                              - link "근처 사진" [ref=e259] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e261]
+                                - generic [ref=e262]: 근처 사진
+                            - listitem [ref=e263]:
+                              - link "근처 사진" [ref=e264] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e266]
+                                - generic [ref=e267]: 근처 사진
+                            - listitem [ref=e268]:
+                              - link "근처 사진" [ref=e269] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e271]
+                                - generic [ref=e272]: 근처 사진
+                            - listitem [ref=e273]:
+                              - link [ref=e274] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e276]
+                            - listitem [ref=e277]:
+                              - link [ref=e278] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e280]
+                            - listitem [ref=e281]:
+                              - link [ref=e282] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e284]
+                        - generic [ref=e285]:
+                          - generic [ref=e286]: 위치기반
+                          - generic [ref=e288]: 결제인증
+                          - link "예약정보 호텔 디럭스(본관/서관 25평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e290] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e291]: 호텔 디럭스(본관/서관 25평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - generic [ref=e293]:
+                          - button "좋아요 개수, 1" [ref=e294] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e296]: "1"
+                          - link "좋아요를 누른 사용자" [ref=e298] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e300]
+                  - listitem [ref=e302]:
+                    - generic [ref=e303]:
+                      - generic [ref=e304]:
+                        - link [ref=e305] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e307]
+                        - generic [ref=e308]:
+                          - generic [ref=e309]:
+                            - link "리뷰어 이름, 황환도 브론즈 레벨 레벨 4" [ref=e310] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e311]:
+                                - generic: 리뷰어 이름,
+                                - text: 황환도
+                              - generic [ref=e312]:
+                                - generic [ref=e313]: 브론즈 레벨
+                                - generic [ref=e314]:
+                                  - generic: 레벨
+                                  - text: "4"
+                            - generic [ref=e315]:
+                              - list:
+                                - listitem [ref=e316]: 후기 1
+                                - listitem [ref=e317]: 별점평균 4
+                                - listitem [ref=e318]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e320] [cursor=pointer]:
+                            - generic [ref=e321]: 메뉴 더보기
+                      - generic [ref=e323]:
+                        - generic [ref=e324]:
+                          - generic [ref=e325]:
+                            - generic [ref=e326]:
+                              - generic: 별점
+                              - generic: "4.0"
+                            - generic [ref=e332]: 2025.10.29.
+                          - link "오래되었지만 자연과 어우러진 시설이고, 분위기도 괜찮았어요. 침대도 편안해서 잠 잘잤고 찜... 더보기" [ref=e334] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e335]: 오래되었지만 자연과 어우러진 시설이고, 분위기도 괜찮았어요. 침대도 편안해서 잠 잘잤고 찜... 더보기
+                        - generic [ref=e336]:
+                          - generic [ref=e337]: 결제인증
+                          - link "예약정보 호텔 스탠다드 더블 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e339] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e340]: 호텔 스탠다드 더블 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - generic [ref=e342]:
+                          - button "좋아요 개수, 2" [ref=e343] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e345]: "2"
+                          - link "좋아요를 누른 사용자" [ref=e347] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e349]
+                            - img [ref=e351]
+                  - listitem [ref=e353]:
+                    - generic [ref=e354]:
+                      - generic [ref=e355]:
+                        - link [ref=e356] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e358]
+                        - generic [ref=e359]:
+                          - generic [ref=e360]:
+                            - link "리뷰어 이름, 김석현 브론즈 레벨 레벨 3" [ref=e361] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e362]:
+                                - generic: 리뷰어 이름,
+                                - text: 김석현
+                              - generic [ref=e363]:
+                                - generic [ref=e364]: 브론즈 레벨
+                                - generic [ref=e365]:
+                                  - generic: 레벨
+                                  - text: "3"
+                            - generic [ref=e366]:
+                              - list:
+                                - listitem [ref=e367]: 후기 2
+                                - listitem [ref=e368]: 별점평균 2.5
+                                - listitem [ref=e369]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e371] [cursor=pointer]:
+                            - generic [ref=e372]: 메뉴 더보기
+                      - generic [ref=e374]:
+                        - generic [ref=e375]:
+                          - generic [ref=e376]:
+                            - generic [ref=e377]:
+                              - generic: 별점
+                              - generic: "3.0"
+                            - generic [ref=e382]: 2025.09.25.
+                            - generic [ref=e383]:
+                              - generic [ref=e384]:
+                                - img "주차" [ref=e385]
+                                - text: 주차
+                              - generic [ref=e386]:
+                                - img "청결" [ref=e387]
+                                - text: 청결
+                          - link "오래 되서 관리을 좀더 해애겠다 목재 계단이 넌무 낡아서 부서질것 같다" [ref=e389] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e390]: 오래 되서 관리을 좀더 해애겠다 목재 계단이 넌무 낡아서 부서질것 같다
+                        - generic [ref=e391]:
+                          - generic [ref=e392]: 결제인증
+                          - link "예약정보 호텔 스탠다드 트윈 (본관 15평) - (카카오전용_할인가)룸온리(호텔)" [ref=e394] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e395]: 호텔 스탠다드 트윈 (본관 15평) - (카카오전용_할인가)룸온리(호텔)
+                        - button "좋아요 개수, 0" [ref=e398] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e400]: "0"
+                  - listitem [ref=e401]:
+                    - generic [ref=e402]:
+                      - generic [ref=e403]:
+                        - link [ref=e404] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e406]
+                        - generic [ref=e407]:
+                          - generic [ref=e408]:
+                            - link "리뷰어 이름, 김정희 브론즈 레벨 레벨 2" [ref=e409] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e410]:
+                                - generic: 리뷰어 이름,
+                                - text: 김정희
+                              - generic [ref=e411]:
+                                - generic [ref=e412]: 브론즈 레벨
+                                - generic [ref=e413]:
+                                  - generic: 레벨
+                                  - text: "2"
+                            - generic [ref=e414]:
+                              - list:
+                                - listitem [ref=e415]: 후기 1
+                                - listitem [ref=e416]: 별점평균 5
+                                - listitem [ref=e417]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e419] [cursor=pointer]:
+                            - generic [ref=e420]: 메뉴 더보기
+                      - generic [ref=e422]:
+                        - generic [ref=e423]:
+                          - generic [ref=e424]:
+                            - generic [ref=e425]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e432]: 2025.05.19.
+                          - link "대청봉산행잘다녀와서 잘쉬었습니다 저럼한가격에만... 더보기" [ref=e434] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e435]: 대청봉산행잘다녀와서 잘쉬었습니다 저럼한가격에만... 더보기
+                        - generic [ref=e436]:
+                          - generic [ref=e437]: 결제인증
+                          - link "예약정보 호텔 스탠다드 더블 (본관 15평) - (카카오전용_할인가)룸온리(호텔)" [ref=e439] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e440]: 호텔 스탠다드 더블 (본관 15평) - (카카오전용_할인가)룸온리(호텔)
+                        - button "좋아요 개수, 0" [ref=e443] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e445]: "0"
+                  - listitem [ref=e446]:
+                    - generic [ref=e447]:
+                      - generic [ref=e448]:
+                        - link [ref=e449] [cursor=pointer]:
+                          - /url: "#"
+                        - generic [ref=e451]:
+                          - generic [ref=e452]:
+                            - link "리뷰어 이름, 서정자 브론즈 레벨 레벨 4" [ref=e453] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e454]:
+                                - generic: 리뷰어 이름,
+                                - text: 서정자
+                              - generic [ref=e455]:
+                                - generic [ref=e456]: 브론즈 레벨
+                                - generic [ref=e457]:
+                                  - generic: 레벨
+                                  - text: "4"
+                            - generic [ref=e458]:
+                              - list:
+                                - listitem [ref=e459]: 후기 3
+                                - listitem [ref=e460]: 별점평균 5
+                                - listitem [ref=e461]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e463] [cursor=pointer]:
+                            - generic [ref=e464]: 메뉴 더보기
+                      - generic [ref=e466]:
+                        - generic [ref=e467]:
+                          - generic [ref=e468]:
+                            - generic [ref=e469]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e476]: 2025.04.17.
+                            - generic [ref=e478]:
+                              - img "청결" [ref=e479]
+                              - text: 청결
+                          - link "리셉션에서 친절히 응대해 주셔서 업글도 무료로 해주셨으며30년 가까이 이용해왔음을 밝히자 환한미소로 응대하시고 서관... 더보기" [ref=e481] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e482]: 리셉션에서 친절히 응대해 주셔서 업글도 무료로 해주셨으며30년 가까이 이용해왔음을 밝히자 환한미소로 응대하시고 서관... 더보기
+                        - generic [ref=e483]:
+                          - generic [ref=e484]: 결제인증
+                          - link "예약정보 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e486] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e487]: 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - button "좋아요 개수, 0" [ref=e490] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e492]: "0"
+                  - listitem [ref=e493]:
+                    - generic [ref=e494]:
+                      - generic [ref=e495]:
+                        - link [ref=e496] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e498]
+                        - generic [ref=e499]:
+                          - generic [ref=e500]:
+                            - link "리뷰어 이름, 지니 브론즈 레벨 레벨 2" [ref=e501] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e502]:
+                                - generic: 리뷰어 이름,
+                                - text: 지니
+                              - generic [ref=e503]:
+                                - generic [ref=e504]: 브론즈 레벨
+                                - generic [ref=e505]:
+                                  - generic: 레벨
+                                  - text: "2"
+                            - generic [ref=e506]:
+                              - list:
+                                - listitem [ref=e507]: 후기 4
+                                - listitem [ref=e508]: 별점평균 5
+                                - listitem [ref=e509]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e511] [cursor=pointer]:
+                            - generic [ref=e512]: 메뉴 더보기
+                      - generic [ref=e514]:
+                        - generic [ref=e515]:
+                          - generic [ref=e516]:
+                            - generic [ref=e517]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e524]: 2025.03.10.
+                            - generic [ref=e525]:
+                              - generic [ref=e526]:
+                                - img "뷰" [ref=e527]
+                                - text: 뷰
+                              - generic [ref=e528]:
+                                - img "시설" [ref=e529]
+                                - text: 시설
+                              - button "+1" [ref=e530] [cursor=pointer]
+                          - link "가족끼리 조용히 온천도하고 트래킹도할수있고 또바닷가도 조금... 더보기" [ref=e532] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e533]: 가족끼리 조용히 온천도하고 트래킹도할수있고 또바닷가도 조금... 더보기
+                        - generic [ref=e534]:
+                          - generic [ref=e535]: 결제인증
+                          - link "예약정보 호텔 패밀리(본관/서관 30평) - 탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e537] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e538]: 호텔 패밀리(본관/서관 30평) - 탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - button "좋아요 개수, 0" [ref=e541] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e543]: "0"
+                  - listitem [ref=e544]:
+                    - generic [ref=e545]:
+                      - generic [ref=e546]:
+                        - link [ref=e547] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e549]
+                        - generic [ref=e550]:
+                          - generic [ref=e551]:
+                            - link "리뷰어 이름, 이미화 브론즈 레벨 레벨 4" [ref=e552] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e553]:
+                                - generic: 리뷰어 이름,
+                                - text: 이미화
+                              - generic [ref=e554]:
+                                - generic [ref=e555]: 브론즈 레벨
+                                - generic [ref=e556]:
+                                  - generic: 레벨
+                                  - text: "4"
+                            - generic [ref=e557]:
+                              - list:
+                                - listitem [ref=e558]: 후기 2
+                                - listitem [ref=e559]: 별점평균 3
+                                - listitem [ref=e560]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e562] [cursor=pointer]:
+                            - generic [ref=e563]: 메뉴 더보기
+                      - generic [ref=e565]:
+                        - generic [ref=e566]:
+                          - generic [ref=e567]:
+                            - generic [ref=e568]:
+                              - generic: 별점
+                              - generic: "3.0"
+                            - generic [ref=e573]: 2025.02.19.
+                            - generic [ref=e575]:
+                              - img "시설" [ref=e576]
+                              - text: 시설
+                          - link "온천수는 좋은데 객실등 시설은 많이 노후되었어요" [ref=e578] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e579]: 온천수는 좋은데 객실등 시설은 많이 노후되었어요
+                        - generic [ref=e580]:
+                          - generic [ref=e581]: 결제인증
+                          - link "예약정보 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e583] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e584]: 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - button "좋아요 개수, 0" [ref=e587] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e589]: "0"
+                  - listitem [ref=e590]:
+                    - generic [ref=e591]:
+                      - generic [ref=e592]:
+                        - link [ref=e593] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e595]
+                        - generic [ref=e596]:
+                          - generic [ref=e597]:
+                            - link "리뷰어 이름, 임창기 브론즈 레벨 레벨 3" [ref=e598] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e599]:
+                                - generic: 리뷰어 이름,
+                                - text: 임창기
+                              - generic [ref=e600]:
+                                - generic [ref=e601]: 브론즈 레벨
+                                - generic [ref=e602]:
+                                  - generic: 레벨
+                                  - text: "3"
+                            - generic [ref=e603]:
+                              - list:
+                                - listitem [ref=e604]: 후기 1
+                                - listitem [ref=e605]: 별점평균 5
+                                - listitem [ref=e606]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e608] [cursor=pointer]:
+                            - generic [ref=e609]: 메뉴 더보기
+                      - generic [ref=e611]:
+                        - generic [ref=e612]:
+                          - generic [ref=e613]:
+                            - generic [ref=e614]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e621]: 2025.01.03.
+                            - generic [ref=e622]:
+                              - generic [ref=e623]:
+                                - img "가격" [ref=e624]
+                                - text: 가격
+                              - generic [ref=e625]:
+                                - img "뷰" [ref=e626]
+                                - text: 뷰
+                              - button "+2" [ref=e627] [cursor=pointer]
+                          - link "시설은 오래 되었지만 리모델링 하여서 생각보다 깨끗하게 사용 하였습니다 온천욕으로 한 해 피로를 털어버리고 왔네요 ㅋ 근무자 분의 빠른스피드 안내는... 더보기" [ref=e629] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e630]: 시설은 오래 되었지만 리모델링 하여서 생각보다 깨끗하게 사용 하였습니다 온천욕으로 한 해 피로를 털어버리고 왔네요 ㅋ 근무자 분의 빠른스피드 안내는... 더보기
+                        - generic [ref=e631]:
+                          - generic [ref=e632]: 결제인증
+                          - link "예약정보 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회" [ref=e634] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e635]: 호텔 스탠다드 트윈 (본관 15평) - ★온캉스특가★탄산/알카리 기준인원 온천 & 찜질 무료이용 1회
+                        - generic [ref=e637]:
+                          - button "좋아요 개수, 1" [ref=e638] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e640]: "1"
+                          - link "좋아요를 누른 사용자" [ref=e642] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e644]
+                  - listitem [ref=e646]:
+                    - generic [ref=e647]:
+                      - generic [ref=e648]:
+                        - link [ref=e649] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e651]
+                        - generic [ref=e652]:
+                          - generic [ref=e653]:
+                            - link "리뷰어 이름, 정용란 브론즈 레벨 레벨 2" [ref=e654] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e655]:
+                                - generic: 리뷰어 이름,
+                                - text: 정용란
+                              - generic [ref=e656]:
+                                - generic [ref=e657]: 브론즈 레벨
+                                - generic [ref=e658]:
+                                  - generic: 레벨
+                                  - text: "2"
+                            - generic [ref=e659]:
+                              - list:
+                                - listitem [ref=e660]: 후기 1
+                                - listitem [ref=e661]: 별점평균 5
+                                - listitem [ref=e662]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e664] [cursor=pointer]:
+                            - generic [ref=e665]: 메뉴 더보기
+                      - generic [ref=e667]:
+                        - generic [ref=e668]:
+                          - generic [ref=e669]:
+                            - generic [ref=e670]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e677]: 2024.09.25.
+                            - generic [ref=e679]:
+                              - img "청결" [ref=e680]
+                              - text: 청결
+                          - link "오래된 건물이지만 청결했고 주차도 원활했고 온천도 여유롭게 즐길수 있었음." [ref=e682] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e683]: 오래된 건물이지만 청결했고 주차도 원활했고 온천도 여유롭게 즐길수 있었음.
+                        - generic [ref=e684]:
+                          - generic [ref=e685]: 결제인증
+                          - link "예약정보 호텔 스탠다드 더블 (본관 15평) - ☆온캉스PKG☆온천&찜질1회 (기준인원)" [ref=e687] [cursor=pointer]:
+                            - /url: "#"
+                            - generic: 예약정보
+                            - generic [ref=e688]: 호텔 스탠다드 더블 (본관 15평) - ☆온캉스PKG☆온천&찜질1회 (기준인원)
+                        - button "좋아요 개수, 0" [ref=e691] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e693]: "0"
+                  - listitem [ref=e694]:
+                    - generic [ref=e695]:
+                      - generic [ref=e696]:
+                        - link [ref=e697] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e699]
+                        - generic [ref=e700]:
+                          - generic [ref=e701]:
+                            - link "리뷰어 이름, 마루마루 실버 레벨 레벨 11" [ref=e702] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e703]:
+                                - generic: 리뷰어 이름,
+                                - text: 마루마루
+                              - generic [ref=e704]:
+                                - generic [ref=e705]: 실버 레벨
+                                - generic [ref=e706]:
+                                  - generic: 레벨
+                                  - text: "11"
+                            - generic [ref=e707]:
+                              - list:
+                                - listitem [ref=e708]: 후기 9
+                                - listitem [ref=e709]: 별점평균 3.1
+                                - listitem [ref=e710]: 팔로워 1
+                          - button "메뉴 더보기" [ref=e712] [cursor=pointer]:
+                            - generic [ref=e713]: 메뉴 더보기
+                      - generic [ref=e715]:
+                        - generic [ref=e716]:
+                          - generic [ref=e717]:
+                            - generic [ref=e718]:
+                              - generic: 별점
+                              - generic: "1.0"
+                            - generic [ref=e721]: 2025.05.24.
+                          - link "실악산 가려고 예약해 숙박 했는데 위치는 좋음. 중앙난방이 너무... 더보기" [ref=e723] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e724]: 실악산 가려고 예약해 숙박 했는데 위치는 좋음. 중앙난방이 너무... 더보기
+                        - generic [ref=e727]:
+                          - strong: 사진 목록
+                          - list [ref=e728]:
+                            - listitem [ref=e729]:
+                              - link "근처 사진" [ref=e730] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e732]
+                                - generic [ref=e733]: 근처 사진
+                        - generic [ref=e735]: 위치기반
+                        - generic [ref=e737]:
+                          - button "좋아요 개수, 1" [ref=e738] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e740]: "1"
+                          - link "좋아요를 누른 사용자" [ref=e742] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e744]
+                  - listitem [ref=e746]:
+                    - generic [ref=e747]:
+                      - generic [ref=e748]:
+                        - link [ref=e749] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e751]
+                        - generic [ref=e752]:
+                          - generic [ref=e753]:
+                            - link "리뷰어 이름, 니입에캔뒤 골드 레벨 레벨 50" [ref=e754] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e755]:
+                                - generic: 리뷰어 이름,
+                                - text: 니입에캔뒤
+                              - generic [ref=e756]:
+                                - generic [ref=e757]: 골드 레벨
+                                - generic [ref=e758]:
+                                  - generic: 레벨
+                                  - text: "50"
+                            - generic [ref=e759]:
+                              - list:
+                                - listitem [ref=e760]: 후기 331
+                                - listitem [ref=e761]: 별점평균 3.4
+                                - listitem [ref=e762]: 팔로워 38
+                          - button "메뉴 더보기" [ref=e764] [cursor=pointer]:
+                            - generic [ref=e765]: 메뉴 더보기
+                      - generic [ref=e767]:
+                        - generic [ref=e768]:
+                          - generic [ref=e769]:
+                            - generic [ref=e770]:
+                              - generic: 별점
+                              - generic: "1.0"
+                            - generic [ref=e773]: 2024.11.20.
+                          - link "탄산온천을 위한 숙박이라면 괜찮으나 등산이나 여타 관광목적이라면 비추천.욕실 샤워기 수전이 최악!! 대중탕에서 절수... 더보기" [ref=e775] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e776]: 탄산온천을 위한 숙박이라면 괜찮으나 등산이나 여타 관광목적이라면 비추천.욕실 샤워기 수전이 최악!! 대중탕에서 절수... 더보기
+                        - generic [ref=e779]:
+                          - strong: 사진 목록
+                          - list [ref=e780]:
+                            - listitem [ref=e781]:
+                              - link "근처 사진" [ref=e782] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e784]
+                                - generic [ref=e785]: 근처 사진
+                        - generic [ref=e787]: 위치기반
+                        - generic [ref=e789]:
+                          - button "좋아요 개수, 2" [ref=e790] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e792]: "2"
+                          - link "좋아요를 누른 사용자" [ref=e794] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e796]
+                            - img [ref=e798]
+                  - listitem [ref=e800]:
+                    - generic [ref=e801]:
+                      - generic [ref=e802]:
+                        - link [ref=e803] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e805]
+                        - generic [ref=e806]:
+                          - generic [ref=e807]:
+                            - link "리뷰어 이름, 디용핑 블루 레벨 레벨 76" [ref=e808] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e809]:
+                                - generic: 리뷰어 이름,
+                                - text: 디용핑
+                              - generic [ref=e810]:
+                                - generic [ref=e811]: 블루 레벨
+                                - generic [ref=e812]:
+                                  - generic: 레벨
+                                  - text: "76"
+                            - generic [ref=e813]:
+                              - list:
+                                - listitem [ref=e814]: 후기 706
+                                - listitem [ref=e815]: 별점평균 4.1
+                                - listitem [ref=e816]: 팔로워 165
+                          - button "메뉴 더보기" [ref=e818] [cursor=pointer]:
+                            - generic [ref=e819]: 메뉴 더보기
+                      - generic [ref=e821]:
+                        - generic [ref=e822]:
+                          - generic [ref=e823]:
+                            - generic [ref=e824]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e831]: 2024.09.06.
+                          - 'link "⛰️강원 양양 설악산(대청봉)(명산100+) 오색 최단코스 블랙야크BAC 🗓등산일자: 20240901(일),맑음,오전8시 산행시작 ⏱️... 더보기" [ref=e833] [cursor=pointer]':
+                            - /url: "#"
+                            - paragraph [ref=e834]: "⛰️강원 양양 설악산(대청봉)(명산100+) 오색 최단코스 블랙야크BAC 🗓등산일자: 20240901(일),맑음,오전8시 산행시작 ⏱️... 더보기"
+                        - generic [ref=e837]:
+                          - strong: 사진 목록
+                          - list [ref=e838]:
+                            - listitem [ref=e839]:
+                              - link "근처 사진" [ref=e840] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e842]
+                                - generic [ref=e843]: 근처 사진
+                            - listitem [ref=e844]:
+                              - link "근처 사진" [ref=e845] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e847]
+                                - generic [ref=e848]: 근처 사진
+                        - generic [ref=e850]: 위치기반
+                        - generic [ref=e852]:
+                          - button "좋아요 개수, 2" [ref=e853] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e855]: "2"
+                          - link "좋아요를 누른 사용자" [ref=e857] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e859]
+                            - img [ref=e861]
+                  - listitem [ref=e863]:
+                    - generic [ref=e864]:
+                      - generic [ref=e865]:
+                        - link [ref=e866] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e868]
+                        - generic [ref=e869]:
+                          - generic [ref=e870]:
+                            - link "리뷰어 이름, 임지희 브론즈 레벨 레벨 9" [ref=e871] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e872]:
+                                - generic: 리뷰어 이름,
+                                - text: 임지희
+                              - generic [ref=e873]:
+                                - generic [ref=e874]: 브론즈 레벨
+                                - generic [ref=e875]:
+                                  - generic: 레벨
+                                  - text: "9"
+                            - generic [ref=e876]:
+                              - list:
+                                - listitem [ref=e877]: 후기 4
+                                - listitem [ref=e878]: 별점평균 2
+                                - listitem [ref=e879]: 팔로워 1
+                          - button "메뉴 더보기" [ref=e881] [cursor=pointer]:
+                            - generic [ref=e882]: 메뉴 더보기
+                      - generic [ref=e884]:
+                        - generic [ref=e885]:
+                          - generic [ref=e886]:
+                            - generic [ref=e887]:
+                              - generic: 별점
+                              - generic: "1.0"
+                            - generic [ref=e890]: 2024.07.16.
+                            - generic [ref=e892]:
+                              - img "뷰" [ref=e893]
+                              - text: 뷰
+                          - link "패밀리 콘도 A동 뷰는 좋은데 시설은 80년대 유스호스텔급이고 하 벌레에 천장내려앉음에 어휴 그리고 콘도는 물과 각티슈등 호텔에 있는 여러 제공되는 물품이 없더라구요ㅡㅡ 거기다... 더보기" [ref=e895] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e896]: 패밀리 콘도 A동 뷰는 좋은데 시설은 80년대 유스호스텔급이고 하 벌레에 천장내려앉음에 어휴 그리고 콘도는 물과 각티슈등 호텔에 있는 여러 제공되는 물품이 없더라구요ㅡㅡ 거기다... 더보기
+                        - generic [ref=e899]:
+                          - strong: 사진 목록
+                          - list [ref=e900]:
+                            - listitem [ref=e901]:
+                              - link "근처 사진" [ref=e902] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e904]
+                                - generic [ref=e905]: 근처 사진
+                            - listitem [ref=e906]:
+                              - link "근처 사진" [ref=e907] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e909]
+                                - generic [ref=e910]: 근처 사진
+                            - listitem [ref=e911]:
+                              - link "근처 사진" [ref=e912] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e914]
+                                - generic [ref=e915]: 근처 사진
+                            - listitem [ref=e916]:
+                              - link "근처 사진" [ref=e917] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e919]
+                                - generic [ref=e920]: 근처 사진
+                        - generic [ref=e922]: 위치기반
+                        - button "좋아요 개수, 0" [ref=e925] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e927]: "0"
+                  - listitem [ref=e928]:
+                    - generic [ref=e929]:
+                      - generic [ref=e930]:
+                        - link [ref=e931] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e933]
+                        - generic [ref=e934]:
+                          - generic [ref=e935]:
+                            - link "리뷰어 이름, Nile?!! 닐~★ 브론즈 레벨 레벨 7" [ref=e936] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e937]:
+                                - generic: 리뷰어 이름,
+                                - text: Nile?!! 닐~★
+                              - generic [ref=e938]:
+                                - generic [ref=e939]: 브론즈 레벨
+                                - generic [ref=e940]:
+                                  - generic: 레벨
+                                  - text: "7"
+                            - generic [ref=e941]:
+                              - list:
+                                - listitem [ref=e942]: 후기 8
+                                - listitem [ref=e943]: 별점평균 4.1
+                                - listitem [ref=e944]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e946] [cursor=pointer]:
+                            - generic [ref=e947]: 메뉴 더보기
+                      - generic [ref=e949]:
+                        - generic [ref=e950]:
+                          - generic [ref=e951]:
+                            - generic [ref=e952]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e959]: 2024.02.26.
+                            - generic [ref=e960]:
+                              - generic [ref=e961]:
+                                - img "가격" [ref=e962]
+                                - text: 가격
+                              - generic [ref=e963]:
+                                - img "시설" [ref=e964]
+                                - text: 시설
+                          - link "온천호텔 사우나 오직 온천 때문에 방문했는데 다음에 설악산 탐방로 들르고 오기 좋은 곳... 더보기" [ref=e966] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e967]: 온천호텔 사우나 오직 온천 때문에 방문했는데 다음에 설악산 탐방로 들르고 오기 좋은 곳... 더보기
+                        - generic [ref=e970]:
+                          - strong: 사진 목록
+                          - list [ref=e971]:
+                            - listitem [ref=e972]:
+                              - link "근처 사진" [ref=e973] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e975]
+                                - generic [ref=e976]: 근처 사진
+                            - listitem [ref=e977]:
+                              - link [ref=e978] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e980]
+                            - listitem [ref=e981]:
+                              - link [ref=e982] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e984]
+                        - generic [ref=e986]: 위치기반
+                        - button "좋아요 개수, 0" [ref=e989] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e991]: "0"
+                  - listitem [ref=e992]:
+                    - generic [ref=e993]:
+                      - generic [ref=e994]:
+                        - link [ref=e995] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e997]
+                        - generic [ref=e998]:
+                          - generic [ref=e999]:
+                            - link "리뷰어 이름, Lee. K su 브론즈 레벨 레벨 7" [ref=e1000] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1001]:
+                                - generic: 리뷰어 이름,
+                                - text: Lee. K su
+                              - generic [ref=e1002]:
+                                - generic [ref=e1003]: 브론즈 레벨
+                                - generic [ref=e1004]:
+                                  - generic: 레벨
+                                  - text: "7"
+                            - generic [ref=e1005]:
+                              - list:
+                                - listitem [ref=e1006]: 후기 5
+                                - listitem [ref=e1007]: 별점평균 1
+                                - listitem [ref=e1008]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e1010] [cursor=pointer]:
+                            - generic [ref=e1011]: 메뉴 더보기
+                      - generic [ref=e1013]:
+                        - generic [ref=e1014]:
+                          - generic [ref=e1015]:
+                            - generic [ref=e1016]:
+                              - generic: 별점
+                              - generic: "1.0"
+                            - generic [ref=e1019]: 2023.11.07.
+                          - link "오랜만에 마눌님과 어려운 시간내서 속초-오색약수 여행마치고 근처 숙소 트립닷컴에 탐색해 찾아온곳이 완전폭망수준 이네요. ... 더보기" [ref=e1021] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1022]: 오랜만에 마눌님과 어려운 시간내서 속초-오색약수 여행마치고 근처 숙소 트립닷컴에 탐색해 찾아온곳이 완전폭망수준 이네요. ... 더보기
+                        - generic [ref=e1025]:
+                          - strong: 사진 목록
+                          - list [ref=e1026]:
+                            - listitem [ref=e1027]:
+                              - link "근처 사진" [ref=e1028] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1030]
+                                - generic [ref=e1031]: 근처 사진
+                            - listitem [ref=e1032]:
+                              - link "근처 사진" [ref=e1033] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1035]
+                                - generic [ref=e1036]: 근처 사진
+                            - listitem [ref=e1037]:
+                              - link "근처 사진" [ref=e1038] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1040]
+                                - generic [ref=e1041]: 근처 사진
+                        - generic [ref=e1043]: 위치기반
+                        - button "좋아요 개수, 0" [ref=e1046] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e1048]: "0"
+                  - listitem [ref=e1049]:
+                    - generic [ref=e1050]:
+                      - generic [ref=e1051]:
+                        - link [ref=e1052] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e1054]
+                        - generic [ref=e1055]:
+                          - generic [ref=e1056]:
+                            - link "리뷰어 이름, 믿어라후기 실버 레벨 레벨 26" [ref=e1057] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1058]:
+                                - generic: 리뷰어 이름,
+                                - text: 믿어라후기
+                              - generic [ref=e1059]:
+                                - generic [ref=e1060]: 실버 레벨
+                                - generic [ref=e1061]:
+                                  - generic: 레벨
+                                  - text: "26"
+                            - generic [ref=e1062]:
+                              - list:
+                                - listitem [ref=e1063]: 후기 126
+                                - listitem [ref=e1064]: 별점평균 4.4
+                                - listitem [ref=e1065]: 팔로워 8
+                          - button "메뉴 더보기" [ref=e1067] [cursor=pointer]:
+                            - generic [ref=e1068]: 메뉴 더보기
+                      - generic [ref=e1070]:
+                        - generic [ref=e1071]:
+                          - generic [ref=e1072]:
+                            - generic [ref=e1073]:
+                              - generic: 별점
+                              - generic: "3.0"
+                            - generic [ref=e1078]: 2023.08.09.
+                          - link "끙" [ref=e1080] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1081]: 끙
+                        - generic [ref=e1084]:
+                          - strong: 사진 목록
+                          - list [ref=e1085]:
+                            - listitem [ref=e1086]:
+                              - link "근처 사진" [ref=e1087] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1089]
+                                - generic [ref=e1090]: 근처 사진
+                        - generic [ref=e1092]: 위치기반
+                        - button "좋아요 개수, 0" [ref=e1095] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e1097]: "0"
+                  - listitem [ref=e1098]:
+                    - generic [ref=e1099]:
+                      - generic [ref=e1100]:
+                        - link [ref=e1101] [cursor=pointer]:
+                          - /url: "#"
+                        - generic [ref=e1103]:
+                          - generic [ref=e1104]:
+                            - link "리뷰어 이름, 안녕하십려니까 실버 레벨 레벨 11" [ref=e1105] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1106]:
+                                - generic: 리뷰어 이름,
+                                - text: 안녕하십려니까
+                              - generic [ref=e1107]:
+                                - generic [ref=e1108]: 실버 레벨
+                                - generic [ref=e1109]:
+                                  - generic: 레벨
+                                  - text: "11"
+                            - generic [ref=e1110]:
+                              - list:
+                                - listitem [ref=e1111]: 후기 9
+                                - listitem [ref=e1112]: 별점평균 4.7
+                                - listitem [ref=e1113]: 팔로워 2
+                          - button "메뉴 더보기" [ref=e1115] [cursor=pointer]:
+                            - generic [ref=e1116]: 메뉴 더보기
+                      - generic [ref=e1118]:
+                        - generic [ref=e1119]:
+                          - generic [ref=e1120]:
+                            - generic [ref=e1121]:
+                              - generic: 별점
+                              - generic: "4.0"
+                            - generic [ref=e1127]: 2023.05.20.
+                            - generic [ref=e1129]:
+                              - img "뷰" [ref=e1130]
+                              - text: 뷰
+                          - link "설악산 등반 하려고 2일 숙박했는데, 잠시 쉬어가는 곳으로 생각하면 좋아요! 등반하고 호텔 지하에 있는 온천에도 다양한 이벤트 탕들이 많아서 하나씩 들어가 보는 재미도 있습니당 :)" [ref=e1132] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1133]: 설악산 등반 하려고 2일 숙박했는데, 잠시 쉬어가는 곳으로 생각하면 좋아요! 등반하고 호텔 지하에 있는 온천에도 다양한 이벤트 탕들이 많아서 하나씩 들어가 보는 재미도 있습니당 :)
+                        - generic [ref=e1136]:
+                          - strong: 사진 목록
+                          - list [ref=e1137]:
+                            - listitem [ref=e1138]:
+                              - link "근처 사진" [ref=e1139] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1141]
+                                - generic [ref=e1142]: 근처 사진
+                            - listitem [ref=e1143]:
+                              - link "근처 사진" [ref=e1144] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1146]
+                                - generic [ref=e1147]: 근처 사진
+                        - generic [ref=e1149]: 위치기반
+                        - generic [ref=e1151]:
+                          - button "좋아요 개수, 1" [ref=e1152] [cursor=pointer]:
+                            - generic: 좋아요 개수,
+                            - generic [ref=e1154]: "1"
+                          - link "좋아요를 누른 사용자" [ref=e1156] [cursor=pointer]:
+                            - /url: "#"
+                            - strong: 좋아요를 누른 사용자
+                            - img [ref=e1158]
+                  - listitem [ref=e1160]:
+                    - generic [ref=e1161]:
+                      - generic [ref=e1162]:
+                        - link [ref=e1163] [cursor=pointer]:
+                          - /url: "#"
+                        - generic [ref=e1165]:
+                          - generic [ref=e1166]:
+                            - link "리뷰어 이름, \":.~•*It's me*•~.:\" 골드 레벨 레벨 42" [ref=e1167] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1168]:
+                                - generic: 리뷰어 이름,
+                                - text: "\":.~•*It's me*•~.:\""
+                              - generic [ref=e1169]:
+                                - generic [ref=e1170]: 골드 레벨
+                                - generic [ref=e1171]:
+                                  - generic: 레벨
+                                  - text: "42"
+                            - generic [ref=e1172]:
+                              - list:
+                                - listitem [ref=e1173]: 후기 248
+                                - listitem [ref=e1174]: 별점평균 3.7
+                                - listitem [ref=e1175]: 팔로워 19
+                          - button "메뉴 더보기" [ref=e1177] [cursor=pointer]:
+                            - generic [ref=e1178]: 메뉴 더보기
+                      - generic [ref=e1180]:
+                        - generic [ref=e1181]:
+                          - generic [ref=e1182]:
+                            - generic [ref=e1183]:
+                              - generic: 별점
+                              - generic: "5.0"
+                            - generic [ref=e1190]: 2023.01.21.
+                          - link "2/3일 있었습니다. 탄산수가 22도라 겨울엔 각오가 필요했습니다. 물이 정말 좋네요... 더보기" [ref=e1192] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1193]: 2/3일 있었습니다. 탄산수가 22도라 겨울엔 각오가 필요했습니다. 물이 정말 좋네요... 더보기
+                        - generic [ref=e1196]:
+                          - strong: 사진 목록
+                          - list [ref=e1197]:
+                            - listitem [ref=e1198]:
+                              - link "근처 사진" [ref=e1199] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1201]
+                                - generic [ref=e1202]: 근처 사진
+                            - listitem [ref=e1203]:
+                              - link "근처 사진" [ref=e1204] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1206]
+                                - generic [ref=e1207]: 근처 사진
+                        - generic [ref=e1209]: 위치기반
+                        - button "좋아요 개수, 0" [ref=e1212] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e1214]: "0"
+                  - listitem [ref=e1215]:
+                    - generic [ref=e1216]:
+                      - generic [ref=e1217]:
+                        - link [ref=e1218] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e1220]
+                        - generic [ref=e1221]:
+                          - generic [ref=e1222]:
+                            - link "리뷰어 이름, 유유 블루 레벨 레벨 62" [ref=e1223] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1224]:
+                                - generic: 리뷰어 이름,
+                                - text: 유유
+                              - generic [ref=e1225]:
+                                - generic [ref=e1226]: 블루 레벨
+                                - generic [ref=e1227]:
+                                  - generic: 레벨
+                                  - text: "62"
+                            - generic [ref=e1228]:
+                              - list:
+                                - listitem [ref=e1229]: 후기 927
+                                - listitem [ref=e1230]: 별점평균 4.4
+                                - listitem [ref=e1231]: 팔로워 44
+                          - button "메뉴 더보기" [ref=e1233] [cursor=pointer]:
+                            - generic [ref=e1234]: 메뉴 더보기
+                      - generic [ref=e1236]:
+                        - generic [ref=e1237]:
+                          - generic [ref=e1238]:
+                            - generic [ref=e1239]:
+                              - generic: 별점
+                              - generic: "2.0"
+                            - generic [ref=e1243]: 2025.12.30.
+                          - link "시설은 노후했어요 오색코스로 등산하긴 최고 온천은 좋아요 샤워실 수업이 너무약해요" [ref=e1245] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1246]: 시설은 노후했어요 오색코스로 등산하긴 최고 온천은 좋아요 샤워실 수업이 너무약해요
+                        - generic [ref=e1249]:
+                          - strong: 사진 목록
+                          - list [ref=e1250]:
+                            - listitem [ref=e1251]:
+                              - link [ref=e1252] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1254]
+                        - button "좋아요 개수, 0" [ref=e1256] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e1258]: "0"
+                  - listitem [ref=e1259]:
+                    - generic [ref=e1260]:
+                      - generic [ref=e1261]:
+                        - link [ref=e1262] [cursor=pointer]:
+                          - /url: "#"
+                          - img [ref=e1264]
+                        - generic [ref=e1265]:
+                          - generic [ref=e1266]:
+                            - link "리뷰어 이름, ^^해피어니^^ 브론즈 레벨 레벨 6" [ref=e1267] [cursor=pointer]:
+                              - /url: "#"
+                              - generic [ref=e1268]:
+                                - generic: 리뷰어 이름,
+                                - text: ^^해피어니^^
+                              - generic [ref=e1269]:
+                                - generic [ref=e1270]: 브론즈 레벨
+                                - generic [ref=e1271]:
+                                  - generic: 레벨
+                                  - text: "6"
+                            - generic [ref=e1272]:
+                              - list:
+                                - listitem [ref=e1273]: 후기 4
+                                - listitem [ref=e1274]: 별점평균 4.8
+                                - listitem [ref=e1275]: 팔로워 0
+                          - button "메뉴 더보기" [ref=e1277] [cursor=pointer]:
+                            - generic [ref=e1278]: 메뉴 더보기
+                      - generic [ref=e1280]:
+                        - generic [ref=e1281]:
+                          - generic [ref=e1282]:
+                            - generic [ref=e1283]:
+                              - generic: 별점
+                              - generic: "4.0"
+                            - generic [ref=e1289]: 2025.03.18.
+                            - generic [ref=e1290]:
+                              - generic [ref=e1291]:
+                                - img "가격" [ref=e1292]
+                                - text: 가격
+                              - generic [ref=e1293]:
+                                - img "뷰" [ref=e1294]
+                                - text: 뷰
+                              - button "+1" [ref=e1295] [cursor=pointer]
+                          - link "즐거운 가족여행을 다녀왔어요. 찜질방과 탄산온천도하구 맛난것도 먹고 재밌게 잘놀다가왔네요.^^~" [ref=e1297] [cursor=pointer]:
+                            - /url: "#"
+                            - paragraph [ref=e1298]: 즐거운 가족여행을 다녀왔어요. 찜질방과 탄산온천도하구 맛난것도 먹고 재밌게 잘놀다가왔네요.^^~
+                        - generic [ref=e1301]:
+                          - strong: 사진 목록
+                          - list [ref=e1302]:
+                            - listitem [ref=e1303]:
+                              - link [ref=e1304] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1306]
+                            - listitem [ref=e1307]:
+                              - link [ref=e1308] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1310]
+                            - listitem [ref=e1311]:
+                              - link [ref=e1312] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1314]
+                            - listitem [ref=e1315]:
+                              - link [ref=e1316] [cursor=pointer]:
+                                - /url: "#"
+                                - img [ref=e1318]
+                        - button "좋아요 개수, 0" [ref=e1320] [cursor=pointer]:
+                          - generic: 좋아요 개수,
+                          - generic [ref=e1322]: "0"
+                  - listitem
+        - generic [ref=e1323]:
+          - strong: 기타 메뉴
+          - list [ref=e1324]:
+            - listitem [ref=e1325]:
+              - button "프린트하기" [ref=e1326] [cursor=pointer]:
+                - generic [ref=e1327]: 프린트하기
+            - listitem [ref=e1328]:
+              - button "약도만들기" [ref=e1329] [cursor=pointer]:
+                - generic [ref=e1330]: 약도만들기
+    - contentinfo [ref=e22]:
+      - generic [ref=e24]:
+        - heading "서비스 이용정보" [level=2]
+        - list [ref=e25]:
+          - listitem [ref=e26]:
+            - link "약관 및 정책" [ref=e27] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/terms
+          - listitem [ref=e28]:
+            - link "공지사항" [ref=e29] [cursor=pointer]:
+              - /url: https://kakaomap.tistory.com/category/%EC%95%8C%EB%A6%BD%EB%8B%88%EB%8B%A4/%EC%97%85%EB%8D%B0%EC%9D%B4%ED%8A%B8
+          - listitem [ref=e30]:
+            - link "개인정보처리방침" [ref=e31] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/privacy?type=p&lang=ko
+              - strong [ref=e32]: 개인정보처리방침
+          - listitem [ref=e33]:
+            - link "고객센터" [ref=e34] [cursor=pointer]:
+              - /url: https://cs.kakao.com/requests?locale=ko&service=101
+          - listitem [ref=e35]:
+            - link "권리침해신고" [ref=e36] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/right
+        - paragraph [ref=e1331]: (주)카카오는 통신판매중개시스템의 제공자로 통신판매의 당사자가 아니며 상품의 주문 배송 및 환불 등과 관련한 의무와 책임은 각 판매자에게 있습니다.
+        - generic [ref=e37]:
+          - link "© Kakao Corp." [ref=e39] [cursor=pointer]:
+            - /url: https://www.kakaocorp.com
+          - button "사업자 정보" [ref=e1332] [cursor=pointer]: 사업자 정보
+```

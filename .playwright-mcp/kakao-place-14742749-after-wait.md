@@ -1,0 +1,853 @@
+### Page state
+- Page URL: https://place.map.kakao.com/14742749#review
+- Page Title: 동해보양온천컨벤션호텔 | 카카오맵
+- Page Snapshot:
+```yaml
+- generic [active] [ref=e1]:
+  - generic:
+    - link "본문 바로가기" [ref=e2] [cursor=pointer]:
+      - /url: "#mainContent"
+    - link "메뉴 바로가기" [ref=e3] [cursor=pointer]:
+      - /url: "#gnbContent"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - heading "kakaomap" [level=1] [ref=e7]:
+          - link "kakaomap" [ref=e8] [cursor=pointer]:
+            - /url: "#"
+            - img "kakaomap" [ref=e9]
+        - heading "동해보양온천컨벤션호텔" [level=2] [ref=e35]:
+          - link "동해보양온천컨벤션호텔" [ref=e36] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e10]:
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic: 지도 검색
+              - textbox "지도 검색" [ref=e40]
+              - button "검색" [ref=e42] [cursor=pointer]:
+                - generic [ref=e43]: 검색
+            - blockquote
+          - link "로그인" [ref=e15] [cursor=pointer]:
+            - /url: "#"
+    - main [ref=e16]:
+      - heading "카카오맵 본문" [level=2]
+      - article [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - heading "장소명 동해보양온천컨벤션호텔" [level=3] [ref=e48]:
+                - generic: 장소명
+                - text: 동해보양온천컨벤션호텔
+              - generic [ref=e50]:
+                - generic: 장소 카테고리
+                - text: 호텔
+            - generic [ref=e51]:
+              - generic [ref=e54]: 후기미제공
+              - link "블로그 290 개" [ref=e56] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e57]: 블로그
+                - generic [ref=e58]:
+                  - text: "290"
+                  - generic: 개
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - button "로드뷰" [ref=e62] [cursor=pointer]:
+                - generic [ref=e64]: 로드뷰
+              - button "공유" [ref=e65] [cursor=pointer]:
+                - generic [ref=e67]: 공유
+              - button "지도" [ref=e68] [cursor=pointer]:
+                - generic [ref=e70]: 지도
+              - button "즐겨찾기" [ref=e71] [cursor=pointer]:
+                - generic [ref=e73]: 즐겨찾기
+            - generic [ref=e74]:
+              - button "출발" [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: 출발
+              - button "도착" [ref=e77] [cursor=pointer]:
+                - generic [ref=e78]: 도착
+          - generic [ref=e80]:
+            - link [ref=e82] [cursor=pointer]:
+              - /url: "#"
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - link [ref=e86] [cursor=pointer]:
+                  - /url: "#"
+                - link [ref=e88] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=e89]:
+                - link [ref=e91] [cursor=pointer]:
+                  - /url: "#"
+                - link "업로드 된 사진 수 999+" [ref=e93] [cursor=pointer]:
+                  - /url: "#"
+                  - generic [ref=e94]:
+                    - generic [ref=e95]: 업로드 된 사진 수
+                    - generic [ref=e96]: 999+
+          - generic [ref=e97]:
+            - link "예약" [ref=e99] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e101]: 예약
+            - link "추가 전 채널" [ref=e103] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e104]: 추가 전
+              - generic [ref=e105]: 채널
+        - generic [ref=e106]:
+          - tablist [ref=e109]:
+            - tab "홈" [selected] [ref=e110] [cursor=pointer]
+            - tab "사진" [ref=e111] [cursor=pointer]
+            - tab "예약" [ref=e112] [cursor=pointer]
+            - tab "혜택・소식" [ref=e113] [cursor=pointer]
+            - tab "블로그" [ref=e114] [cursor=pointer]
+            - tab "랭킹" [ref=e115] [cursor=pointer]
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - link "매장 소식을 받아보세요" [ref=e119]:
+                  - /url: "#"
+                  - text: 매장 소식을 받아보세요
+                - button "소식받기" [ref=e121] [cursor=pointer]:
+                  - generic [ref=e123]: 소식받기
+              - generic [ref=e125]:
+                - strong: 쿠폰 목록
+                - list [ref=e126]:
+                  - listitem [ref=e127]:
+                    - link "카카오톡 예약하기 카카오톡 예약하기 10000원 할인 예약/결제시 사용" [ref=e129] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [ref=e131]:
+                        - generic [ref=e132]:
+                          - img "카카오톡 예약하기" [ref=e133]
+                          - text: 카카오톡 예약하기
+                        - strong [ref=e134]: 10000원 할인
+                        - generic [ref=e135]: 예약/결제시 사용
+                  - listitem [ref=e136]:
+                    - link "카카오톡 예약하기 카카오톡 예약하기 6000원 할인 예약/결제시 사용" [ref=e138] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [ref=e140]:
+                        - generic [ref=e141]:
+                          - img "카카오톡 예약하기" [ref=e142]
+                          - text: 카카오톡 예약하기
+                        - strong [ref=e143]: 6000원 할인
+                        - generic [ref=e144]: 예약/결제시 사용
+                  - listitem [ref=e145]:
+                    - link "카카오톡 예약하기 카카오톡 예약하기 3000원 할인 예약/결제시 사용" [ref=e147] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [ref=e149]:
+                        - generic [ref=e150]:
+                          - img "카카오톡 예약하기" [ref=e151]
+                          - text: 카카오톡 예약하기
+                        - strong [ref=e152]: 3000원 할인
+                        - generic [ref=e153]: 예약/결제시 사용
+                  - listitem [ref=e154]:
+                    - link "카카오톡 예약하기 카카오톡 예약하기 2000원 할인 예약/결제시 사용" [ref=e156] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [ref=e158]:
+                        - generic [ref=e159]:
+                          - img "카카오톡 예약하기" [ref=e160]
+                          - text: 카카오톡 예약하기
+                        - strong [ref=e161]: 2000원 할인
+                        - generic [ref=e162]: 예약/결제시 사용
+            - generic [ref=e163]:
+              - heading "장소 기본 정보" [level=4]
+              - generic [ref=e164]:
+                - generic [ref=e165]:
+                  - heading "영업정보" [level=5] [ref=e166]:
+                    - generic [ref=e167]: 영업정보
+                  - generic [ref=e170]:
+                    - text: 영업정보
+                    - generic [ref=e171]: 온천 7:00~21:00(마감 20:00)/수영장 8:00~19:00(마감 18:00)
+                - generic [ref=e172]:
+                  - heading "URL" [level=5] [ref=e173]:
+                    - generic [ref=e174]: URL
+                  - link "http://www.msgh.kr/" [ref=e177] [cursor=pointer]:
+                    - /url: http://www.msgh.kr/
+                - generic [ref=e178]:
+                  - heading "주소" [level=5] [ref=e179]:
+                    - generic [ref=e180]: 주소
+                  - generic [ref=e182]:
+                    - text: 강원특별자치도 동해시 동해대로 6285 (우)25701
+                    - button "복사" [ref=e183] [cursor=pointer]
+                    - button "펼치기" [ref=e184] [cursor=pointer]:
+                      - generic [ref=e185]: 펼치기
+                - generic [ref=e186]:
+                  - heading "전화" [level=5] [ref=e187]:
+                    - generic [ref=e188]: 전화
+                  - generic [ref=e190]:
+                    - text: 033-530-0800
+                    - button "복사" [ref=e191] [cursor=pointer]
+                    - button "접기" [ref=e192] [cursor=pointer]:
+                      - generic [ref=e193]: 접기
+                - generic [ref=e194]:
+                  - heading "인증 매장" [level=5] [ref=e195]:
+                    - generic [ref=e196]: 인증 매장
+                  - generic [ref=e199]: 사업자 정보가 확인된 장소입니다.
+              - link "정보 수정 제안하기 최대 5점" [ref=e200] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e202]: 정보 수정 제안하기
+                - generic [ref=e203]: 최대 5점
+            - generic [ref=e205]:
+              - heading "장소 기본 정보" [level=4]
+              - generic [ref=e206]:
+                - generic [ref=e207]:
+                  - heading "매장 정보" [level=4] [ref=e209]
+                  - button "펼치기" [expanded] [ref=e210] [cursor=pointer]:
+                    - generic [ref=e211]: 펼치기
+                - generic [ref=e213]:
+                  - heading "시설정보" [level=5]
+                  - list [ref=e214]:
+                    - listitem [ref=e215]:
+                      - img "서비스" [ref=e216]
+                      - generic [ref=e217]: 주차가능
+                    - listitem [ref=e218]:
+                      - img "서비스" [ref=e219]
+                      - generic [ref=e220]: 예약가능
+                - generic [ref=e221]:
+                  - generic [ref=e222]:
+                    - heading "결제" [level=5] [ref=e223]
+                    - list [ref=e226]:
+                      - listitem [ref=e227]:
+                        - link "제로페이" [ref=e228] [cursor=pointer]:
+                          - /url: "#none"
+                          - img "제로페이" [ref=e229]
+                      - listitem [ref=e230]:
+                        - button "안내" [ref=e232] [cursor=pointer]:
+                          - generic [ref=e233]: 안내
+                  - generic [ref=e234]:
+                    - heading "태그" [level=5] [ref=e235]
+                    - generic [ref=e237]:
+                      - link "#가족실" [ref=e238] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#관광호텔" [ref=e239] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#물놀이" [ref=e240] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#바베큐장" [ref=e241] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#비즈니스호텔" [ref=e242] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#사우나" [ref=e243] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#산책로" [ref=e244] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#실외수영장" [ref=e245] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#연회장" [ref=e246] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#오션뷰" [ref=e247] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#오토캠핑" [ref=e248] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#온돌룸" [ref=e249] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#온천호텔" [ref=e250] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#워크샵" [ref=e251] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#유아전용풀장" [ref=e252] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#조식서비스" [ref=e253] [cursor=pointer]:
+                        - /url: "#none"
+                      - link "#호캉스" [ref=e254] [cursor=pointer]:
+                        - /url: "#none"
+                  - generic [ref=e255]:
+                    - heading "인증" [level=5] [ref=e256]
+                    - generic [ref=e257]:
+                      - generic [ref=e258]:
+                        - text: 호텔등급 3성급
+                        - generic [ref=e259]:
+                          - img "한국관광협회중앙회" [ref=e260]
+                          - text: 한국관광협회중앙회
+                      - generic [ref=e261]: 등급 결정일 2023.10.10.
+            - generic [ref=e262]:
+              - heading "예약하기" [level=4] [ref=e266]
+              - generic [ref=e267]:
+                - list [ref=e268]:
+                  - listitem [ref=e269]:
+                    - link "룸타입 별관 별장온천텔 더블 가격정보 룸온리 57,800원~ 객실 서비스 정보 6평 산 전망 더블룸 더블베드" [ref=e271] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e273]:
+                        - generic: 룸타입
+                        - text: 별관 별장온천텔 더블
+                      - generic [ref=e274]:
+                        - generic: 가격정보
+                        - generic [ref=e275]: 룸온리
+                        - text: 57,800원~
+                      - generic [ref=e277]:
+                        - generic: 객실 서비스 정보
+                        - generic [ref=e278]: 6평
+                        - generic [ref=e279]: 산 전망
+                        - generic [ref=e280]: 더블룸
+                        - generic [ref=e281]: 더블베드
+                    - generic [ref=e283]:
+                      - strong: 사진 목록
+                      - list [ref=e284]:
+                        - listitem [ref=e285]:
+                          - link [ref=e286] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e288]:
+                          - link [ref=e289] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e291]:
+                          - link [ref=e292] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e294]:
+                          - link [ref=e295] [cursor=pointer]:
+                            - /url: "#"
+                  - listitem [ref=e297]:
+                    - link "룸타입 별관 별장온천텔 온돌 가격정보 룸온리 57,800원~ 객실 서비스 정보 6평 산 전망 온돌룸" [ref=e299] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e301]:
+                        - generic: 룸타입
+                        - text: 별관 별장온천텔 온돌
+                      - generic [ref=e302]:
+                        - generic: 가격정보
+                        - generic [ref=e303]: 룸온리
+                        - text: 57,800원~
+                      - generic [ref=e305]:
+                        - generic: 객실 서비스 정보
+                        - generic [ref=e306]: 6평
+                        - generic [ref=e307]: 산 전망
+                        - generic [ref=e308]: 온돌룸
+                    - generic [ref=e310]:
+                      - strong: 사진 목록
+                      - list [ref=e311]:
+                        - listitem [ref=e312]:
+                          - link [ref=e313] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e315]:
+                          - link [ref=e316] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e318]:
+                          - link [ref=e319] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e321]:
+                          - link [ref=e322] [cursor=pointer]:
+                            - /url: "#"
+                  - listitem [ref=e324]:
+                    - link "룸타입 공원온돌 가격정보 룸온리 68,310원~ 객실 서비스 정보 6평 온돌룸" [ref=e326] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e328]:
+                        - generic: 룸타입
+                        - text: 공원온돌
+                      - generic [ref=e329]:
+                        - generic: 가격정보
+                        - generic [ref=e330]: 룸온리
+                        - text: 68,310원~
+                      - generic [ref=e332]:
+                        - generic: 객실 서비스 정보
+                        - generic [ref=e333]: 6평
+                        - generic [ref=e334]: 온돌룸
+                    - generic [ref=e336]:
+                      - strong: 사진 목록
+                      - list [ref=e337]:
+                        - listitem [ref=e338]:
+                          - link [ref=e339] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e341]:
+                          - link [ref=e342] [cursor=pointer]:
+                            - /url: "#"
+                  - listitem [ref=e344]:
+                    - link "룸타입 별관 별장온천텔 가족실 가격정보 룸온리 92,480원~ 객실 서비스 정보 12평 바다 전망 온돌룸" [ref=e346] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e348]:
+                        - generic: 룸타입
+                        - text: 별관 별장온천텔 가족실
+                      - generic [ref=e349]:
+                        - generic: 가격정보
+                        - generic [ref=e350]: 룸온리
+                        - text: 92,480원~
+                      - generic [ref=e352]:
+                        - generic: 객실 서비스 정보
+                        - generic [ref=e353]: 12평
+                        - generic [ref=e354]: 바다 전망
+                        - generic [ref=e355]: 온돌룸
+                    - generic [ref=e357]:
+                      - strong: 사진 목록
+                      - list [ref=e358]:
+                        - listitem [ref=e359]:
+                          - link [ref=e360] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e362]:
+                          - link [ref=e363] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e365]:
+                          - link [ref=e366] [cursor=pointer]:
+                            - /url: "#"
+                        - listitem [ref=e368]:
+                          - link [ref=e369] [cursor=pointer]:
+                            - /url: "#"
+                - link "예약 더보기" [ref=e372] [cursor=pointer]:
+                  - /url: "#reservation"
+                  - text: 예약 더보기
+            - generic [ref=e374]:
+              - generic [ref=e375]:
+                - heading "시간별 방문자 데이터" [level=4] [ref=e377]
+                - generic [ref=e378]: 업데이트 2026.01.20.
+              - generic [ref=e379]:
+                - generic [ref=e380]:
+                  - strong: 범례
+                  - list [ref=e381]:
+                    - listitem [ref=e382]:
+                      - generic [ref=e384]: 화요일평균
+                    - listitem [ref=e385]:
+                      - generic [ref=e387]: 주평균
+                - img [ref=e389]
+              - list [ref=e391]:
+                - listitem [ref=e392]:
+                  - generic [ref=e393]:
+                    - radio "월" [ref=e394] [cursor=pointer]
+                    - generic [ref=e396] [cursor=pointer]: 월
+                - listitem [ref=e397]:
+                  - generic [ref=e398]:
+                    - radio "화" [checked] [ref=e399] [cursor=pointer]
+                    - generic [ref=e401] [cursor=pointer]: 화
+                - listitem [ref=e402]:
+                  - generic [ref=e403]:
+                    - radio "수" [ref=e404] [cursor=pointer]
+                    - generic [ref=e406] [cursor=pointer]: 수
+                - listitem [ref=e407]:
+                  - generic [ref=e408]:
+                    - radio "목" [ref=e409] [cursor=pointer]
+                    - generic [ref=e411] [cursor=pointer]: 목
+                - listitem [ref=e412]:
+                  - generic [ref=e413]:
+                    - radio "금" [ref=e414] [cursor=pointer]
+                    - generic [ref=e416] [cursor=pointer]: 금
+                - listitem [ref=e417]:
+                  - generic [ref=e418]:
+                    - radio "토" [ref=e419] [cursor=pointer]
+                    - generic [ref=e421] [cursor=pointer]: 토
+                - listitem [ref=e422]:
+                  - generic [ref=e423]:
+                    - radio "일" [ref=e424] [cursor=pointer]
+                    - generic [ref=e426] [cursor=pointer]: 일
+            - generic [ref=e429]:
+              - generic [ref=e430]: 안내
+              - paragraph [ref=e431]: 매장주 요청으로 후기가 제공되지 않는 장소입니다.
+            - generic [ref=e432]:
+              - generic [ref=e433]:
+                - heading "이 지역 검색 랭킹" [level=4] [ref=e435]
+                - generic [ref=e436]: 업데이트 2026.01.20.
+              - tablist [ref=e439]:
+                - tab "맛집" [selected] [ref=e440] [cursor=pointer]
+                - tab "가볼만한 곳" [ref=e441] [cursor=pointer]
+              - generic [ref=e442]:
+                - tablist [ref=e444]:
+                  - tab "전체" [selected] [ref=e445] [cursor=pointer]:
+                    - generic [ref=e446]: 전체
+                  - tab "한식" [ref=e447] [cursor=pointer]:
+                    - generic [ref=e448]: 한식
+                  - tab "양식" [ref=e449] [cursor=pointer]:
+                    - generic [ref=e450]: 양식
+                  - tab "일식" [ref=e451] [cursor=pointer]:
+                    - generic [ref=e452]: 일식
+                  - tab "중식" [ref=e453] [cursor=pointer]:
+                    - generic [ref=e454]: 중식
+                  - tab "아시안" [ref=e455] [cursor=pointer]:
+                    - generic [ref=e456]: 아시안
+                  - tab "카페" [ref=e457] [cursor=pointer]:
+                    - generic [ref=e458]: 카페
+                  - tab "돈가스" [ref=e459] [cursor=pointer]:
+                    - generic [ref=e460]: 돈가스
+                  - tab "칼국수" [ref=e461] [cursor=pointer]:
+                    - generic [ref=e462]: 칼국수
+                  - tab "초밥" [ref=e463] [cursor=pointer]:
+                    - generic [ref=e464]: 초밥
+                  - tab "떡볶이" [ref=e465] [cursor=pointer]:
+                    - generic [ref=e466]: 떡볶이
+                  - tab "피자" [ref=e467] [cursor=pointer]:
+                    - generic [ref=e468]: 피자
+                  - tab "햄버거" [ref=e469] [cursor=pointer]:
+                    - generic [ref=e470]: 햄버거
+                  - tab "만두" [ref=e471] [cursor=pointer]:
+                    - generic [ref=e472]: 만두
+                  - tab "짬뽕" [ref=e473] [cursor=pointer]:
+                    - generic [ref=e474]: 짬뽕
+                  - tab "쌀국수" [ref=e475] [cursor=pointer]:
+                    - generic [ref=e476]: 쌀국수
+                  - tab "마라탕" [ref=e477] [cursor=pointer]:
+                    - generic [ref=e478]: 마라탕
+                  - tab "양꼬치" [ref=e479] [cursor=pointer]:
+                    - generic [ref=e480]: 양꼬치
+                  - tab "회" [ref=e481] [cursor=pointer]:
+                    - generic [ref=e482]: 회
+                  - tab "빵" [ref=e483] [cursor=pointer]:
+                    - generic [ref=e484]: 빵
+                  - tab "치킨" [ref=e485] [cursor=pointer]:
+                    - generic [ref=e486]: 치킨
+                  - tab "장어" [ref=e487] [cursor=pointer]:
+                    - generic [ref=e488]: 장어
+                  - tab "국밥" [ref=e489] [cursor=pointer]:
+                    - generic [ref=e490]: 국밥
+                  - tab "닭갈비" [ref=e491] [cursor=pointer]:
+                    - generic [ref=e492]: 닭갈비
+                  - tab "삼겹살" [ref=e493] [cursor=pointer]:
+                    - generic [ref=e494]: 삼겹살
+                - button "접기" [ref=e496] [cursor=pointer]:
+                  - generic [ref=e497]: 접기
+              - generic [ref=e498]:
+                - list [ref=e499]:
+                  - listitem [ref=e500]:
+                    - link "1 도암식당 별점 3.0 후기 64 업종 육류,고기 지역 강원 대관령면" [ref=e501] [cursor=pointer]:
+                      - /url: "#"
+                      - emphasis [ref=e502]: "1"
+                      - img [ref=e504]
+                      - generic [ref=e505]:
+                        - strong [ref=e506]: 도암식당
+                        - generic [ref=e507]:
+                          - generic [ref=e508]:
+                            - generic: 별점
+                            - generic [ref=e509]: "3.0"
+                          - generic [ref=e512]: 후기 64
+                        - generic [ref=e514]:
+                          - generic: 업종
+                          - text: 육류,고기
+                        - generic [ref=e516]:
+                          - generic: 지역
+                          - text: 강원 대관령면
+                  - listitem [ref=e517]:
+                    - link "2 강릉꼬막비빔밥 풍호맛뜨락 본점 별점 4.4 후기 74 업종 한식 지역 강원 노암동" [ref=e518] [cursor=pointer]:
+                      - /url: "#"
+                      - emphasis [ref=e519]: "2"
+                      - img [ref=e521]
+                      - generic [ref=e522]:
+                        - strong [ref=e523]: 강릉꼬막비빔밥 풍호맛뜨락 본점
+                        - generic [ref=e524]:
+                          - generic [ref=e525]:
+                            - generic: 별점
+                            - generic [ref=e526]: "4.4"
+                          - generic [ref=e529]: 후기 74
+                        - generic [ref=e531]:
+                          - generic: 업종
+                          - text: 한식
+                        - generic [ref=e533]:
+                          - generic: 지역
+                          - text: 강원 노암동
+                  - listitem [ref=e534]:
+                    - link "3 금학칼국수분식 별점 2.7 후기 133 업종 칼국수 지역 강원 금학동" [ref=e535] [cursor=pointer]:
+                      - /url: "#"
+                      - emphasis [ref=e536]: "3"
+                      - img [ref=e538]
+                      - generic [ref=e539]:
+                        - strong [ref=e540]: 금학칼국수분식
+                        - generic [ref=e541]:
+                          - generic [ref=e542]:
+                            - generic: 별점
+                            - generic [ref=e543]: "2.7"
+                          - generic [ref=e546]: 후기 133
+                        - generic [ref=e548]:
+                          - generic: 업종
+                          - text: 칼국수
+                        - generic [ref=e550]:
+                          - generic: 지역
+                          - text: 강원 금학동
+                  - listitem [ref=e551]:
+                    - link "4 킨십 카페 별점 4.6 후기 22 업종 카페 지역 강원 강현면" [ref=e552] [cursor=pointer]:
+                      - /url: "#"
+                      - emphasis [ref=e553]: "4"
+                      - img [ref=e555]
+                      - generic [ref=e556]:
+                        - strong [ref=e557]: 킨십 카페
+                        - generic [ref=e558]:
+                          - generic [ref=e559]:
+                            - generic: 별점
+                            - generic [ref=e560]: "4.6"
+                          - generic [ref=e563]: 후기 22
+                        - generic [ref=e565]:
+                          - generic: 업종
+                          - text: 카페
+                        - generic [ref=e567]:
+                          - generic: 지역
+                          - text: 강원 강현면
+                - generic [ref=e570]: 장소 더보기
+            - generic [ref=e572]:
+              - generic [ref=e574]:
+                - heading "블로그 리뷰" [level=4] [ref=e575]
+                - generic [ref=e576]:
+                  - generic: 등록된 상품 개수
+                  - text: "290"
+              - strong: 블로그 목록
+              - list [ref=e577]:
+                - listitem [ref=e578]:
+                  - generic [ref=e579]:
+                    - 'link "블로그 타이틀 도예와 서예가 동해 망상(望祥)에서 만나다 동해시 동해보양온천컨벤션호텔의 한국관에서 김재구. 김병욱 특별 초대전이 열리고 있다 기간 : 25.12.19 ~ 26.03.20 (금) 무료 관람 아이디어 필링 캘러그라피 창시자 시관 김재구의 작품과 도예가 김병욱의 작품을 동시에 감상할 수 있는 기회라 생각됩니다 이번 전시회는 전통과 현대, 문자와 조형, 그리고 예술가의 손길이 어우러진 융합 예술의 대표적 블로그명 자연주의 작성일자 2026.01.10." [ref=e581] [cursor=pointer]':
+                      - /url: "#"
+                      - strong [ref=e582]:
+                        - generic: 블로그 타이틀
+                        - text: 도예와 서예가 동해 망상(望祥)에서 만나다
+                      - paragraph [ref=e583]: "동해시 동해보양온천컨벤션호텔의 한국관에서 김재구. 김병욱 특별 초대전이 열리고 있다 기간 : 25.12.19 ~ 26.03.20 (금) 무료 관람 아이디어 필링 캘러그라피 창시자 시관 김재구의 작품과 도예가 김병욱의 작품을 동시에 감상할 수 있는 기회라 생각됩니다 이번 전시회는 전통과 현대, 문자와 조형, 그리고 예술가의 손길이 어우러진 융합 예술의 대표적"
+                      - generic [ref=e584]:
+                        - generic [ref=e585]:
+                          - generic: 블로그명
+                          - text: 자연주의
+                        - generic [ref=e586]:
+                          - generic: 작성일자
+                          - text: 2026.01.10.
+                    - generic [ref=e589]:
+                      - strong: 사진 목록
+                      - list [ref=e590]:
+                        - listitem [ref=e591]:
+                          - link [ref=e592] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e594]
+                        - listitem [ref=e595]:
+                          - link [ref=e596] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e598]
+                        - listitem [ref=e599]:
+                          - link [ref=e600] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e602]
+                        - listitem [ref=e603]:
+                          - link [ref=e604] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e606]
+                        - listitem [ref=e607]:
+                          - link [ref=e608] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e610]
+                        - listitem [ref=e611]:
+                          - link [ref=e612] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e614]
+                        - listitem [ref=e615]:
+                          - link [ref=e616] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e618]
+                        - listitem [ref=e619]:
+                          - link [ref=e620] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e622]
+                        - listitem [ref=e623]:
+                          - link [ref=e624] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e626]
+                        - listitem [ref=e627]:
+                          - link "업로드 된 사진 수 1" [ref=e628] [cursor=pointer]:
+                            - /url: "#"
+                            - generic [ref=e629]:
+                              - img [ref=e630]
+                              - generic [ref=e631]:
+                                - generic [ref=e632]: 업로드 된 사진 수
+                                - generic [ref=e633]: "1"
+                - listitem [ref=e634]:
+                  - generic [ref=e635]:
+                    - link "블로그 타이틀 동해보양온천호텔 객실, 수친자 성지 실내 수영장 후기 안녕하세요 오늘은 망상에 위치한 동해보양온천호텔 객실 글을 남겨보려고 해요 동해를 지날때면 늘 궁금했던 호텔 건물..😇 여름에 수영장만 따로 이용한 적이 있고요 오늘은 객실 리뷰를 해보려고 합니다. 동해보양온천컨벤션호텔 강원특별자치도 동해시 동해대로 6285 동해보양온천호텔 수친자를 위한 수영장 글이 궁금하신 분들은 아래 글을 참조해 주세요 ✔️원정수영 하 블로그명 그려내고 싶은 것 작성일자 2026.01.10." [ref=e637] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e638]:
+                        - generic: 블로그 타이틀
+                        - text: 동해보양온천호텔 객실, 수친자 성지 실내 수영장 후기
+                      - paragraph [ref=e639]: 안녕하세요 오늘은 망상에 위치한 동해보양온천호텔 객실 글을 남겨보려고 해요 동해를 지날때면 늘 궁금했던 호텔 건물..😇 여름에 수영장만 따로 이용한 적이 있고요 오늘은 객실 리뷰를 해보려고 합니다. 동해보양온천컨벤션호텔 강원특별자치도 동해시 동해대로 6285 동해보양온천호텔 수친자를 위한 수영장 글이 궁금하신 분들은 아래 글을 참조해 주세요 ✔️원정수영 하
+                      - generic [ref=e640]:
+                        - generic [ref=e641]:
+                          - generic: 블로그명
+                          - text: 그려내고 싶은 것
+                        - generic [ref=e642]:
+                          - generic: 작성일자
+                          - text: 2026.01.10.
+                    - generic [ref=e645]:
+                      - strong: 사진 목록
+                      - list [ref=e646]:
+                        - listitem [ref=e647]:
+                          - link [ref=e648] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e650]
+                        - listitem [ref=e651]:
+                          - link [ref=e652] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e654]
+                        - listitem [ref=e655]:
+                          - link [ref=e656] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e658]
+                        - listitem [ref=e659]:
+                          - link [ref=e660] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e662]
+                        - listitem [ref=e663]:
+                          - link [ref=e664] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e666]
+                        - listitem [ref=e667]:
+                          - link [ref=e668] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e670]
+                        - listitem [ref=e671]:
+                          - link [ref=e672] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e674]
+                        - listitem [ref=e675]:
+                          - link [ref=e676] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e678]
+                        - listitem [ref=e679]:
+                          - link [ref=e680] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e682]
+                        - listitem [ref=e683]:
+                          - link "업로드 된 사진 수 5" [ref=e684] [cursor=pointer]:
+                            - /url: "#"
+                            - generic [ref=e685]:
+                              - img [ref=e686]
+                              - generic [ref=e687]:
+                                - generic [ref=e688]: 업로드 된 사진 수
+                                - generic [ref=e689]: "5"
+                - listitem [ref=e690]:
+                  - generic [ref=e691]:
+                    - 'link "블로그 타이틀 동해시 망상해변 & 동해보양온천 컨벤션호텔 동해보양온천 컨벤션호텔 명사십리로 유명한 동해시의 망상해수욕장과 인접하고 국내에서 4번째로 행정안전부의 승인을 얻은 \"국민보양온천\"입니다 동해보양온천 컨벤션호텔 대표전화 : 033-530-0700 주소 : 강원 동해시 동해대로 6285 (망상동, 동해보양온천) 동해 숙소 중에서 망산 해변의 접근성이 편리하고 해변까지 도보로 10분이면 가능합니다 KTX 동해 블로그명 자연주의 작성일자 2026.01.09." [ref=e693] [cursor=pointer]':
+                      - /url: "#"
+                      - strong [ref=e694]:
+                        - generic: 블로그 타이틀
+                        - text: 동해시 망상해변 & 동해보양온천 컨벤션호텔
+                      - paragraph [ref=e695]: "동해보양온천 컨벤션호텔 명사십리로 유명한 동해시의 망상해수욕장과 인접하고 국내에서 4번째로 행정안전부의 승인을 얻은 \"국민보양온천\"입니다 동해보양온천 컨벤션호텔 대표전화 : 033-530-0700 주소 : 강원 동해시 동해대로 6285 (망상동, 동해보양온천) 동해 숙소 중에서 망산 해변의 접근성이 편리하고 해변까지 도보로 10분이면 가능합니다 KTX 동해"
+                      - generic [ref=e696]:
+                        - generic [ref=e697]:
+                          - generic: 블로그명
+                          - text: 자연주의
+                        - generic [ref=e698]:
+                          - generic: 작성일자
+                          - text: 2026.01.09.
+                    - generic [ref=e701]:
+                      - strong: 사진 목록
+                      - list [ref=e702]:
+                        - listitem [ref=e703]:
+                          - link [ref=e704] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e706]
+                        - listitem [ref=e707]:
+                          - link [ref=e708] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e710]
+                        - listitem [ref=e711]:
+                          - link [ref=e712] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e714]
+                        - listitem [ref=e715]:
+                          - link [ref=e716] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e718]
+                        - listitem [ref=e719]:
+                          - link [ref=e720] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e722]
+                        - listitem [ref=e723]:
+                          - link [ref=e724] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e726]
+                        - listitem [ref=e727]:
+                          - link [ref=e728] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e730]
+                        - listitem [ref=e731]:
+                          - link [ref=e732] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e734]
+                        - listitem [ref=e735]:
+                          - link [ref=e736] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e738]
+                        - listitem [ref=e739]:
+                          - link "업로드 된 사진 수 4" [ref=e740] [cursor=pointer]:
+                            - /url: "#"
+                            - generic [ref=e741]:
+                              - img [ref=e742]
+                              - generic [ref=e743]:
+                                - generic [ref=e744]: 업로드 된 사진 수
+                                - generic [ref=e745]: "4"
+                - listitem [ref=e746]:
+                  - generic [ref=e747]:
+                    - link "블로그 타이틀 동해 레인수영장 동해보양온천컨벤션호텔 수영장 자유수영 가격 시간 주차 후기 안녕하세요 용용이입니닷 요새 원정수영에 푹 빠진 저로서 강원도에 가서도 빠질 수 없는게 수영! 그래서 강원도 자유수영장을 열심히 서칭해본 결과 동해보양온천컨벤션호텔 수영장에 레일수영장이 마련되어있고 자유수영도 가능하다는 것을 알아버렸습니닷 > 그래서 제가 냉큼 다녀왔습니닷 동해보양온천컨벤션호텔 레일수영장 자유수영 동해보양온천컨벤션호텔 강원특별자치도 동해시 블로그명 용용이의 구석구석 작성일자 2026.01.07." [ref=e749] [cursor=pointer]:
+                      - /url: "#"
+                      - strong [ref=e750]:
+                        - generic: 블로그 타이틀
+                        - text: 동해 레인수영장 동해보양온천컨벤션호텔 수영장 자유수영 가격 시간 주차 후기
+                      - paragraph [ref=e751]: 안녕하세요 용용이입니닷 요새 원정수영에 푹 빠진 저로서 강원도에 가서도 빠질 수 없는게 수영! 그래서 강원도 자유수영장을 열심히 서칭해본 결과 동해보양온천컨벤션호텔 수영장에 레일수영장이 마련되어있고 자유수영도 가능하다는 것을 알아버렸습니닷 > 그래서 제가 냉큼 다녀왔습니닷 동해보양온천컨벤션호텔 레일수영장 자유수영 동해보양온천컨벤션호텔 강원특별자치도 동해시
+                      - generic [ref=e752]:
+                        - generic [ref=e753]:
+                          - generic: 블로그명
+                          - text: 용용이의 구석구석
+                        - generic [ref=e754]:
+                          - generic: 작성일자
+                          - text: 2026.01.07.
+                    - generic [ref=e757]:
+                      - strong: 사진 목록
+                      - list [ref=e758]:
+                        - listitem [ref=e759]:
+                          - link [ref=e760] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e762]
+                        - listitem [ref=e763]:
+                          - link [ref=e764] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e766]
+                        - listitem [ref=e767]:
+                          - link [ref=e768] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e770]
+                        - listitem [ref=e771]:
+                          - link [ref=e772] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e774]
+                        - listitem [ref=e775]:
+                          - link [ref=e776] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e778]
+                        - listitem [ref=e779]:
+                          - link [ref=e780] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e782]
+                        - listitem [ref=e783]:
+                          - link [ref=e784] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e786]
+                        - listitem [ref=e787]:
+                          - link [ref=e788] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e790]
+                        - listitem [ref=e791]:
+                          - link [ref=e792] [cursor=pointer]:
+                            - /url: "#"
+                            - img [ref=e794]
+                        - listitem [ref=e795]:
+                          - link "업로드 된 사진 수 18" [ref=e796] [cursor=pointer]:
+                            - /url: "#"
+                            - generic [ref=e797]:
+                              - img [ref=e798]
+                              - generic [ref=e799]:
+                                - generic [ref=e800]: 업로드 된 사진 수
+                                - generic [ref=e801]: "18"
+              - link "블로그 리뷰 더보기" [ref=e803] [cursor=pointer]:
+                - /url: "#"
+                - text: 블로그 리뷰 더보기
+        - generic [ref=e805]:
+          - strong: 기타 메뉴
+          - list [ref=e806]:
+            - listitem [ref=e807]:
+              - button "프린트하기" [ref=e808] [cursor=pointer]:
+                - generic [ref=e809]: 프린트하기
+            - listitem [ref=e810]:
+              - button "약도만들기" [ref=e811] [cursor=pointer]:
+                - generic [ref=e812]: 약도만들기
+    - contentinfo [ref=e17]:
+      - generic [ref=e19]:
+        - heading "서비스 이용정보" [level=2]
+        - list [ref=e20]:
+          - listitem [ref=e21]:
+            - link "약관 및 정책" [ref=e22] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/terms
+          - listitem [ref=e23]:
+            - link "공지사항" [ref=e24] [cursor=pointer]:
+              - /url: https://kakaomap.tistory.com/category/%EC%95%8C%EB%A6%BD%EB%8B%88%EB%8B%A4/%EC%97%85%EB%8D%B0%EC%9D%B4%ED%8A%B8
+          - listitem [ref=e25]:
+            - link "개인정보처리방침" [ref=e26] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/privacy?type=p&lang=ko
+              - strong [ref=e27]: 개인정보처리방침
+          - listitem [ref=e28]:
+            - link "고객센터" [ref=e29] [cursor=pointer]:
+              - /url: https://cs.kakao.com/requests?locale=ko&service=101
+          - listitem [ref=e30]:
+            - link "권리침해신고" [ref=e31] [cursor=pointer]:
+              - /url: https://www.kakao.com/policy/right
+        - paragraph [ref=e813]: (주)카카오는 통신판매중개시스템의 제공자로 통신판매의 당사자가 아니며 상품의 주문 배송 및 환불 등과 관련한 의무와 책임은 각 판매자에게 있습니다.
+        - generic [ref=e32]:
+          - link "© Kakao Corp." [ref=e34] [cursor=pointer]:
+            - /url: https://www.kakaocorp.com
+          - button "사업자 정보" [ref=e814] [cursor=pointer]: 사업자 정보
+```
