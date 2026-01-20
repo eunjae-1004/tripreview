@@ -10,6 +10,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway 배포 시 환경 변수 확인
+console.log('환경 변수 확인:');
+console.log(`- PORT: ${process.env.PORT || '미설정 (기본값 3000 사용)'}`);
+console.log(`- NODE_ENV: ${process.env.NODE_ENV || '미설정'}`);
+console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : '미설정'}`);
+
 // 미들웨어
 app.use(cors());
 app.use(express.json());
@@ -17,9 +23,13 @@ app.use(express.json());
 // 라우트
 app.use('/api/admin', adminRoutes);
 
-// Health check
+// Health check (루트 경로와 /health 모두 지원)
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Trip Review Server is running' });
+});
+
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', message: 'Trip Review Server is running' });
 });
 
 // 매주 월요일 새벽 2시에 자동 실행
