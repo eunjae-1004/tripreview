@@ -16,6 +16,12 @@ pool.on('connect', () => {
   console.log('PostgreSQL 연결 성공');
 });
 
+// 연결 에러 처리 (서버가 종료되지 않도록)
+pool.on('error', (err) => {
+  console.error('PostgreSQL 연결 오류:', err);
+  // 서버가 종료되지 않도록 에러만 로깅
+});
+
 pool.on('error', (err) => {
   console.error('PostgreSQL 연결 오류:', err);
 });

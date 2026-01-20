@@ -41,7 +41,18 @@ cron.schedule('0 2 * * 1', async () => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`스케줄: 매주 월요일 오전 2시 자동 실행`);
+});
+
+// 프로세스 종료 시 정리
+process.on('SIGTERM', () => {
+  console.log('SIGTERM 신호 수신, 서버 종료 중...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT 신호 수신, 서버 종료 중...');
+  process.exit(0);
 });

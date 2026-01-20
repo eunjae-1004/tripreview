@@ -105,9 +105,10 @@ class JobService {
   /**
    * 스크래핑 작업 실행
    * 실제로는 기업 목록을 조회하여 각 기업의 포털 URL을 스크래핑해야 합니다.
-   * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
+   * @param {string} dateFilter - 'all' (전체), 'week' (일주일 간격), 'twoWeeks' (2주 간격)
+   * @param {string|null} companyName - 특정 기업명 (null이면 전체 기업)
    */
-  async runScrapingJob(dateFilter = 'week') {
+  async runScrapingJob(dateFilter = 'week', companyName = null) {
     if (this.isRunning) {
       throw new Error('이미 실행 중인 작업이 있습니다.');
     }
@@ -128,9 +129,32 @@ class JobService {
       await scraper.init();
 
       // companies 테이블에서 기업 목록 조회
-      const companies = await pool.query('SELECT * FROM companies');
+      let companies;
+      if (companyName && companyName.trim()) {
+        // 특정 기업만 조회
+        companies = await pool.query(
+          'SELECT * FROM companies WHERE company_name = $1',
+          [companyName.trim()]
+        );
+        if (companies.rows.length === 0) {
+          throw new Error(`기업 "${companyName.trim()}"을 찾을 수 없습니다.`);
+        }
+        console.log(`특정 기업 스크래핑: "${companyName.trim()}"`);
+      } else {
+        // 전체 기업 조회
+        companies = await pool.query('SELECT * FROM companies');
+        console.log('전체 기업 스크래핑');
+      }
 
-      console.log(`날짜 필터: ${dateFilter === 'all' ? '전체' : '일주일 간격'}`);
+      let filterText = '';
+      if (dateFilter === 'all') {
+        filterText = '전체';
+      } else if (dateFilter === 'week') {
+        filterText = '일주일 간격';
+      } else if (dateFilter === 'twoWeeks') {
+        filterText = '2주 간격';
+      }
+      console.log(`날짜 필터: ${filterText}`);
 
       for (const company of companies.rows) {
         try {

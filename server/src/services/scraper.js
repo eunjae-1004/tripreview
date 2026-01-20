@@ -607,16 +607,23 @@ class ScraperService {
         
         try {
           // 날짜 필터링 설정
-          let oneWeekAgo = null;
-          let oneWeekAgoStr = null;
+          let filterDate = null;
+          let filterDateStr = null;
           
           if (dateFilter === 'week') {
             // 오늘 기준 일주일 전까지
             const today = new Date();
-            oneWeekAgo = new Date(today);
-            oneWeekAgo.setDate(today.getDate() - 7);
-            oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
-            console.log(`날짜 필터: ${oneWeekAgoStr} ~ ${today.toISOString().split('T')[0]}`);
+            filterDate = new Date(today);
+            filterDate.setDate(today.getDate() - 7);
+            filterDateStr = filterDate.toISOString().split('T')[0];
+            console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+          } else if (dateFilter === 'twoWeeks') {
+            // 오늘 기준 2주 전까지
+            const today = new Date();
+            filterDate = new Date(today);
+            filterDate.setDate(today.getDate() - 14);
+            filterDateStr = filterDate.toISOString().split('T')[0];
+            console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
           } else {
             // 전체 리뷰 (필터링 없음)
             console.log('날짜 필터: 전체 (필터링 없음)');
@@ -1052,9 +1059,9 @@ class ScraperService {
                 reviewDate = new Date();
               }
               
-              // 날짜 필터링: 일주일 간격 모드일 때만 필터링
-              if (dateFilter === 'week' && oneWeekAgo && reviewDate && reviewDate < oneWeekAgo) {
-                // 일주일 이전 리뷰는 건너뜀
+              // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
+              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate && reviewDate < filterDate) {
+                // 필터 날짜 이전 리뷰는 건너뜀
                 continue;
               }
               
@@ -1460,15 +1467,21 @@ class ScraperService {
       console.log(`후기 페이지로 이동 완료: ${currentUrl}`);
 
       // 날짜 필터링 설정
-      let oneWeekAgo = null;
-      let oneWeekAgoStr = null;
+      let filterDate = null;
+      let filterDateStr = null;
       
       if (dateFilter === 'week') {
         const today = new Date();
-        oneWeekAgo = new Date(today);
-        oneWeekAgo.setDate(today.getDate() - 7);
-        oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
-        console.log(`날짜 필터: ${oneWeekAgoStr} ~ ${today.toISOString().split('T')[0]}`);
+        filterDate = new Date(today);
+        filterDate.setDate(today.getDate() - 7);
+        filterDateStr = filterDate.toISOString().split('T')[0];
+        console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+      } else if (dateFilter === 'twoWeeks') {
+        const today = new Date();
+        filterDate = new Date(today);
+        filterDate.setDate(today.getDate() - 14);
+        filterDateStr = filterDate.toISOString().split('T')[0];
+        console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
       } else {
         console.log('날짜 필터: 전체 (필터링 없음)');
       }
@@ -1610,8 +1623,8 @@ class ScraperService {
               reviewDate = new Date();
             }
             
-            // 날짜 필터링
-            if (dateFilter === 'week' && oneWeekAgo && reviewDate && reviewDate < oneWeekAgo) {
+            // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
+            if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate && reviewDate < filterDate) {
               continue;
             }
             
@@ -4780,7 +4793,7 @@ class ScraperService {
    * 포털 URL에 따라 적절한 스크래퍼 선택
    * @param {string} portalUrl - 포털 URL (카카오맵/야놀자의 경우 null 또는 빈 문자열 가능)
    * @param {string} companyName - 기업명
-   * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
+   * @param {string} dateFilter - 'all' (전체), 'week' (일주일 간격), 'twoWeeks' (2주 간격)
    * @param {number} jobId - 스크래핑 작업 ID (선택사항)
    * @param {string} portalType - 포털 타입 강제 지정 ('kakao', 'yanolja', 'google' 등, 선택사항)
    */
@@ -4822,11 +4835,15 @@ class ScraperService {
 
     // 수집한 리뷰 데이터를 DB 형식에 맞게 변환
     // 날짜 필터링 설정
-    let oneWeekAgo = null;
+    let filterDate = null;
     if (dateFilter === 'week') {
       const today = new Date();
-      oneWeekAgo = new Date(today);
-      oneWeekAgo.setDate(today.getDate() - 7);
+      filterDate = new Date(today);
+      filterDate.setDate(today.getDate() - 7);
+    } else if (dateFilter === 'twoWeeks') {
+      const today = new Date();
+      filterDate = new Date(today);
+      filterDate.setDate(today.getDate() - 14);
     }
     
     let savedCount = 0;
@@ -4856,8 +4873,8 @@ class ScraperService {
       const dateStr = (review.reviewDate || review.date || '').toString();
       let reviewDate = dateStr ? new Date(dateStr) : new Date(Date.now());
       
-      // 날짜 필터링: 일주일 간격 모드일 때만 필터링
-      if (dateFilter === 'week' && oneWeekAgo && reviewDate < oneWeekAgo) {
+      // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
+      if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate < filterDate) {
         filteredCount++;
         continue;
       }

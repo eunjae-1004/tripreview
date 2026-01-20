@@ -29,19 +29,28 @@ router.post('/jobs/start', async (req, res) => {
     }
 
     // 날짜 필터 옵션 (기본값: 'week')
-    const { dateFilter = 'week' } = req.body;
+    const { dateFilter = 'week', companyName = null } = req.body;
     
-    if (dateFilter !== 'all' && dateFilter !== 'week') {
-      return res.status(400).json({ error: 'dateFilter는 "all" 또는 "week"이어야 합니다.' });
+    if (dateFilter !== 'all' && dateFilter !== 'week' && dateFilter !== 'twoWeeks') {
+      return res.status(400).json({ error: 'dateFilter는 "all", "week", "twoWeeks" 중 하나여야 합니다.' });
     }
 
     // 비동기로 실행 (응답은 즉시 반환)
-    jobService.runScrapingJob(dateFilter).catch((error) => {
+    jobService.runScrapingJob(dateFilter, companyName).catch((error) => {
       console.error('스크래핑 작업 실행 오류:', error);
     });
 
-    const filterText = dateFilter === 'all' ? '전체' : '일주일 간격';
-    res.json({ message: `스크래핑 작업이 시작되었습니다. (${filterText})` });
+    let filterText = '';
+    if (dateFilter === 'all') {
+      filterText = '전체';
+    } else if (dateFilter === 'week') {
+      filterText = '일주일 간격';
+    } else if (dateFilter === 'twoWeeks') {
+      filterText = '2주 간격';
+    }
+    
+    const companyText = companyName ? ` (기업: ${companyName})` : ' (전체 기업)';
+    res.json({ message: `스크래핑 작업이 시작되었습니다. (${filterText}${companyText})` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

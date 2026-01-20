@@ -37,7 +37,7 @@ interface Statistics {
   byCompanyAndPortal: Array<{ company_name: string; portal_url: string; count: string }>;
 }
 
-type DateFilter = 'all' | 'week';
+type DateFilter = 'all' | 'week' | 'twoWeeks';
 
 export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
@@ -46,6 +46,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('week');
+  const [companyName, setCompanyName] = useState<string>('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
 
@@ -122,13 +123,23 @@ export default function Home() {
           'x-admin-secret': ADMIN_SECRET,
         },
         body: JSON.stringify({
-          dateFilter: dateFilter, // 'all' 또는 'week'
+          dateFilter: dateFilter, // 'all', 'week', 'twoWeeks'
+          companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
         }),
       });
       const data = await response.json();
       if (response.ok) {
-        const filterText = dateFilter === 'all' ? '전체' : '일주일 간격';
-        setMessage(`스크래핑 작업이 시작되었습니다. (${filterText})`);
+        let filterText = '';
+        if (dateFilter === 'all') {
+          filterText = '전체';
+        } else if (dateFilter === 'week') {
+          filterText = '일주일 간격';
+        } else if (dateFilter === 'twoWeeks') {
+          filterText = '2주 간격';
+        }
+        
+        const companyText = companyName.trim() ? ` (기업: ${companyName.trim()})` : ' (전체 기업)';
+        setMessage(`스크래핑 작업이 시작되었습니다. (${filterText}${companyText})`);
         setTimeout(() => {
           fetchStatus();
           fetchRecentJobs();
@@ -255,11 +266,46 @@ export default function Home() {
                 />
                 <span>일주일 간격</span>
               </label>
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="dateFilter"
+                  value="twoWeeks"
+                  checked={dateFilter === 'twoWeeks'}
+                  onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+                  disabled={loading || isRunning}
+                  className={styles.radioInput}
+                />
+                <span>2주 간격</span>
+              </label>
             </div>
             <p className={styles.filterDescription}>
               {dateFilter === 'all' 
                 ? '모든 리뷰를 수집합니다.' 
-                : '오늘 기준 일주일 이내의 리뷰만 수집합니다.'}
+                : dateFilter === 'week'
+                ? '오늘 기준 일주일 이내의 리뷰만 수집합니다.'
+                : '오늘 기준 2주 이내의 리뷰만 수집합니다.'}
+            </p>
+          </div>
+
+          {/* 기업명 필터 */}
+          <div className={styles.filterSection}>
+            <label className={styles.filterLabel} htmlFor="companyName">
+              기업명 (선택사항):
+            </label>
+            <input
+              id="companyName"
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={loading || isRunning}
+              placeholder="기업명을 입력하면 해당 기업만 스크랩합니다 (비워두면 전체 기업)"
+              className={styles.companyInput}
+            />
+            <p className={styles.filterDescription}>
+              {companyName.trim() 
+                ? `"${companyName.trim()}" 기업만 스크랩합니다.` 
+                : '모든 기업을 스크랩합니다.'}
             </p>
           </div>
 

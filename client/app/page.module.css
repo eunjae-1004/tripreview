@@ -107,6 +107,26 @@
   font-style: italic;
 }
 
+.companyInput {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  margin-top: 8px;
+  transition: border-color 0.2s;
+}
+
+.companyInput:focus {
+  outline: none;
+  border-color: #2196F3;
+}
+
+.companyInput:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
 .controls {
   display: flex;
   gap: 12px;
