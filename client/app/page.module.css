@@ -170,6 +170,35 @@
   background-color: #388E3C;
 }
 
+.buttonPrimary {
+  background-color: #2196F3;
+  font-size: 1.1rem;
+  padding: 14px 28px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background-color: #1976D2;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+  transform: translateY(-1px);
+}
+
+.infoBox {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #E8F5E9;
+  border-left: 4px solid #4CAF50;
+  border-radius: 6px;
+}
+
+.infoText {
+  margin: 0;
+  color: #2E7D32;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .message {
   margin-top: 16px;
   padding: 12px;

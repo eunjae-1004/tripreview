@@ -313,9 +313,9 @@ export default function Home() {
             <button
               onClick={handleStart}
               disabled={loading || isRunning}
-              className={styles.button}
+              className={`${styles.button} ${styles.buttonPrimary}`}
             >
-              작업 시작
+              {loading ? '실행 중...' : isRunning ? '실행 중' : '지금 실행'}
             </button>
             <button
               onClick={handleStop}
@@ -336,6 +336,13 @@ export default function Home() {
             >
               새로고침
             </button>
+          </div>
+          <div className={styles.infoBox}>
+            <p className={styles.infoText}>
+              💡 <strong>지금 실행</strong> 버튼을 클릭하면 설정한 조건(기간, 기업)에 따라 즉시 스크래핑을 시작합니다.
+              <br />
+              자동 스케줄(매주 월요일 오전 2시)과는 별개로 수동으로 실행할 수 있습니다.
+            </p>
           </div>
           {message && (
             <div className={styles.message}>{message}</div>
