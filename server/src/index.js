@@ -33,11 +33,20 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  if (!serverReady) {
+    return res.status(503).json({ 
+      status: 'starting', 
+      message: 'Server is starting up',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
   res.status(200).json({ 
     status: 'ok', 
     message: 'Trip Review Server is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    port: PORT
   });
 });
 
@@ -60,14 +69,23 @@ cron.schedule('0 2 * * 1', async () => {
 });
 
 // 서버 시작
+let serverReady = false;
+
 const server = app.listen(PORT, '0.0.0.0', () => {
+  serverReady = true;
   console.log(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📅 스케줄: 매주 월요일 오전 2시 자동 실행`);
   console.log(`🏥 Health check: http://0.0.0.0:${PORT}/health`);
   console.log(`🌐 서버 준비 완료 - 요청 대기 중...`);
   
   // 서버가 정상적으로 시작되었음을 확인
-  process.stdout.write('READY\n');
+  // Railway가 서버 준비 상태를 확인할 수 있도록
+  if (process.env.NODE_ENV === 'production') {
+    // 프로덕션 환경에서만 READY 신호 출력
+    setTimeout(() => {
+      process.stdout.write('READY\n');
+    }, 1000);
+  }
 });
 
 // 서버 에러 처리
@@ -111,10 +129,20 @@ process.on('SIGINT', () => {
 // 처리되지 않은 에러 처리
 process.on('uncaughtException', (error) => {
   console.error('❌ 처리되지 않은 예외:', error);
+  console.error('스택 트레이스:', error.stack);
   // 서버를 즉시 종료하지 않고 로깅만 수행
+  // Railway가 자동으로 재시작할 수 있도록
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ 처리되지 않은 Promise 거부:', reason);
   // 서버를 즉시 종료하지 않고 로깅만 수행
 });
+
+// 서버가 종료되지 않도록 keep-alive
+setInterval(() => {
+  if (serverReady) {
+    // 서버가 정상 실행 중임을 확인
+    process.stdout.write('.');
+  }
+}, 30000); // 30초마다
