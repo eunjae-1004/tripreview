@@ -51,9 +51,19 @@ cron.schedule('0 2 * * 1', async () => {
 });
 
 // 서버 시작
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`스케줄: 매주 월요일 오전 2시 자동 실행`);
+  console.log(`Health check: http://0.0.0.0:${PORT}/health`);
+});
+
+// 서버 에러 처리
+server.on('error', (err) => {
+  console.error('서버 에러:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`포트 ${PORT}가 이미 사용 중입니다.`);
+    process.exit(1);
+  }
 });
 
 // 프로세스 종료 시 정리
