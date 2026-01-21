@@ -41,6 +41,19 @@ app.get('/health', (req, res) => {
 app.use(cors());
 app.use(express.json());
 
+// 요청 로깅 (프로덕션 환경에서도 API 요청 로깅)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    console.log(`[API] ${req.method} ${req.path} - ${new Date().toISOString()}`);
+    console.log(`[API] Headers:`, {
+      'x-admin-secret': req.headers['x-admin-secret'] ? '설정됨' : '미설정',
+      'content-type': req.headers['content-type'],
+      'origin': req.headers['origin'],
+    });
+  }
+  next();
+});
+
 // 라우트
 app.use('/api/admin', adminRoutes);
 

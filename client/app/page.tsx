@@ -116,6 +116,9 @@ export default function Home() {
     setLoading(true);
     setMessage(null);
     try {
+      console.log(`[API] 작업 시작 요청: ${API_URL}/api/admin/jobs/start`);
+      console.log(`[API] Admin Secret: ${ADMIN_SECRET ? '설정됨' : '미설정'}`);
+      
       const response = await fetch(`${API_URL}/api/admin/jobs/start`, {
         method: 'POST',
         headers: {
@@ -127,29 +130,48 @@ export default function Home() {
           companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
         }),
       });
-      const data = await response.json();
-      if (response.ok) {
-        let filterText = '';
-        if (dateFilter === 'all') {
-          filterText = '전체';
-        } else if (dateFilter === 'week') {
-          filterText = '일주일 간격';
-        } else if (dateFilter === 'twoWeeks') {
-          filterText = '2주 간격';
+      
+      console.log(`[API] 응답 상태: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[API] 에러 응답:`, errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          setMessage(`오류: ${errorData.error || '알 수 없는 오류'}`);
+        } catch {
+          setMessage(`오류: ${response.status} ${response.statusText} - ${errorText}`);
         }
-        
-        const companyText = companyName.trim() ? ` (기업: ${companyName.trim()})` : ' (전체 기업)';
-        setMessage(`스크래핑 작업이 시작되었습니다. (${filterText}${companyText})`);
-        setTimeout(() => {
-          fetchStatus();
-          fetchRecentJobs();
-        }, 1000);
-      } else {
-        setMessage(`오류: ${data.error}`);
+        return;
       }
+      
+      const data = await response.json();
+      console.log(`[API] 성공 응답:`, data);
+      
+      let filterText = '';
+      if (dateFilter === 'all') {
+        filterText = '전체';
+      } else if (dateFilter === 'week') {
+        filterText = '일주일 간격';
+      } else if (dateFilter === 'twoWeeks') {
+        filterText = '2주 간격';
+      }
+      
+      const companyText = companyName.trim() ? ` (기업: ${companyName.trim()})` : ' (전체 기업)';
+      setMessage(`스크래핑 작업이 시작되었습니다. (${filterText}${companyText})`);
+      setTimeout(() => {
+        fetchStatus();
+        fetchRecentJobs();
+      }, 1000);
     } catch (error) {
-      setMessage('작업 시작 실패');
-      console.error(error);
+      console.error('[API] 네트워크 에러:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      setMessage(`작업 시작 실패: ${errorMessage}`);
+      
+      // API URL 확인 메시지 추가
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. API URL을 확인하세요: ${API_URL}`);
+      }
     } finally {
       setLoading(false);
     }
