@@ -33,9 +33,12 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  // Railway Healthcheck 로깅
+  console.log(`[Healthcheck] 요청 수신 - serverReady: ${serverReady}, uptime: ${process.uptime()}`);
+  
   // Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
   // Express 서버가 시작되면 이미 요청을 처리할 수 있으므로 항상 200 반환
-  res.status(200).json({ 
+  const response = {
     status: serverReady ? 'ok' : 'starting',
     message: serverReady ? 'Trip Review Server is running' : 'Server is starting up',
     timestamp: new Date().toISOString(),
@@ -43,7 +46,10 @@ app.get('/health', (req, res) => {
       uptime: process.uptime(),
       port: PORT
     })
-  });
+  };
+  
+  console.log(`[Healthcheck] 응답: ${JSON.stringify(response)}`);
+  res.status(200).json(response);
 });
 
 // 매주 월요일 새벽 2시에 자동 실행
@@ -74,12 +80,15 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🏥 Health check: http://0.0.0.0:${PORT}/health`);
   console.log(`🌐 서버 준비 완료 - 요청 대기 중...`);
   
-  // 서버가 정상적으로 시작되었음을 확인
-  // Railway가 서버 준비 상태를 확인할 수 있도록
+  // Railway Healthcheck를 즉시 테스트
   if (process.env.NODE_ENV === 'production') {
+    // Healthcheck 엔드포인트가 즉시 응답할 수 있도록 확인
+    console.log(`[Railway] Healthcheck 엔드포인트 준비 완료: /health`);
+    
     // 프로덕션 환경에서만 READY 신호 출력
     setTimeout(() => {
       process.stdout.write('READY\n');
+      console.log(`[Railway] READY 신호 전송 완료`);
     }, 1000);
   }
 });
