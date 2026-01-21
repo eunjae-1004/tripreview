@@ -164,7 +164,7 @@ class JobService {
    * @param {string} dateFilter - 'all' (전체), 'week' (일주일 간격), 'twoWeeks' (2주 간격)
    * @param {string|null} companyName - 특정 기업명 (null이면 전체 기업)
    */
-  async runScrapingJob(dateFilter = 'week', companyName = null) {
+  async runScrapingJob(dateFilter = 'week', companyName = null, portals = null) {
     if (this.isRunning) {
       throw new Error('이미 실행 중인 작업이 있습니다.');
     }
@@ -280,76 +280,89 @@ class JobService {
         }
       };
 
+      // portals가 null이면 모든 포털, 배열이면 선택된 포털만
+      const enabledPortals = portals && Array.isArray(portals) && portals.length > 0 
+        ? portals 
+        : ['naver', 'kakao', 'yanolja', 'agoda', 'google']; // 기본값: 모든 포털
+      
+      console.log(`스크래핑할 포털: ${enabledPortals.join(', ')}`);
+
       for (const company of companies.rows) {
         this.ensureNotCancelled();
         const companyLabel = `company="${company.company_name}"`;
 
         // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
-        try {
-          console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 시작 (검색: ${company.company_name})`);
-          this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'starting' });
-          const naverCount = await runWithRetry(
-            { portal: 'naver', companyLabel },
-            () =>
-              scraper.scrapeByPortal(
-                company.naver_url || null,
-                company.company_name,
-                dateFilter,
-                job.id,
-                'naver'
-              )
-          );
-          successCount += naverCount;
-          console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 완료: ${naverCount}개 리뷰 저장`);
-          this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'done' });
-        } catch (error) {
-          errorCount++;
-          console.error(`네이버맵 스크래핑 실패 (${companyLabel}):`, error);
-          await this.appendJobError(
-            job.id,
-            `naver 실패 (${companyLabel}): ${error?.message || String(error)}`
-          );
+        if (enabledPortals.includes('naver')) {
+          try {
+            console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 시작 (검색: ${company.company_name})`);
+            this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'starting' });
+            const naverCount = await runWithRetry(
+              { portal: 'naver', companyLabel },
+              () =>
+                scraper.scrapeByPortal(
+                  company.naver_url || null,
+                  company.company_name,
+                  dateFilter,
+                  job.id,
+                  'naver'
+                )
+            );
+            successCount += naverCount;
+            console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 완료: ${naverCount}개 리뷰 저장`);
+            this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'done' });
+          } catch (error) {
+            errorCount++;
+            console.error(`네이버맵 스크래핑 실패 (${companyLabel}):`, error);
+            await this.appendJobError(
+              job.id,
+              `naver 실패 (${companyLabel}): ${error?.message || String(error)}`
+            );
+          }
         }
 
-        try {
-          console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 시작 (검색: ${company.company_name})`);
-          this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'starting' });
-          const kakaoCount = await runWithRetry(
-            { portal: 'kakao', companyLabel },
-            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'kakao')
-          );
-          successCount += kakaoCount;
-          console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 완료: ${kakaoCount}개 리뷰 저장`);
-          this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'done' });
-        } catch (error) {
-          errorCount++;
-          console.error(`카카오맵 스크래핑 실패 (${companyLabel}):`, error);
-          await this.appendJobError(
-            job.id,
-            `kakao 실패 (${companyLabel}): ${error?.message || String(error)}`
-          );
+        if (enabledPortals.includes('kakao')) {
+          try {
+            console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 시작 (검색: ${company.company_name})`);
+            this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'starting' });
+            const kakaoCount = await runWithRetry(
+              { portal: 'kakao', companyLabel },
+              () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'kakao')
+            );
+            successCount += kakaoCount;
+            console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 완료: ${kakaoCount}개 리뷰 저장`);
+            this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'done' });
+          } catch (error) {
+            errorCount++;
+            console.error(`카카오맵 스크래핑 실패 (${companyLabel}):`, error);
+            await this.appendJobError(
+              job.id,
+              `kakao 실패 (${companyLabel}): ${error?.message || String(error)}`
+            );
+          }
         }
 
-        try {
-          console.log(`기업 "${company.company_name}" 야놀자 스크래핑 시작 (검색: ${company.company_name})`);
-          this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'starting' });
-          const yanoljaCount = await runWithRetry(
-            { portal: 'yanolja', companyLabel },
-            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'yanolja')
-          );
-          successCount += yanoljaCount;
-          console.log(`기업 "${company.company_name}" 야놀자 스크래핑 완료: ${yanoljaCount}개 리뷰 저장`);
-          this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'done' });
-        } catch (error) {
-          errorCount++;
-          console.error(`야놀자 스크래핑 실패 (${companyLabel}):`, error);
-          await this.appendJobError(
-            job.id,
-            `yanolja 실패 (${companyLabel}): ${error?.message || String(error)}`
-          );
+        if (enabledPortals.includes('yanolja')) {
+          try {
+            console.log(`기업 "${company.company_name}" 야놀자 스크래핑 시작 (검색: ${company.company_name})`);
+            this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'starting' });
+            const yanoljaCount = await runWithRetry(
+              { portal: 'yanolja', companyLabel },
+              () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'yanolja')
+            );
+            successCount += yanoljaCount;
+            console.log(`기업 "${company.company_name}" 야놀자 스크래핑 완료: ${yanoljaCount}개 리뷰 저장`);
+            this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'done' });
+          } catch (error) {
+            errorCount++;
+            console.error(`야놀자 스크래핑 실패 (${companyLabel}):`, error);
+            await this.appendJobError(
+              job.id,
+              `yanolja 실패 (${companyLabel}): ${error?.message || String(error)}`
+            );
+          }
         }
 
-        if (company.agoda_url) {
+        if (enabledPortals.includes('agoda') && company.agoda_url) {
           try {
             console.log(`기업 "${company.company_name}" 아고다 스크래핑 시작: ${company.agoda_url}`);
             this.setProgress({ company: company.company_name, portal: 'agoda', attempt: 1, phase: 'starting' });
@@ -368,27 +381,29 @@ class JobService {
               `agoda 실패 (${companyLabel}): ${error?.message || String(error)}`
             );
           }
-        } else {
+        } else if (enabledPortals.includes('agoda') && !company.agoda_url) {
           console.log(`기업 "${company.company_name}" 아고다 스크래핑 건너뜀 (agoda_url 없음)`);
         }
 
-        try {
-          console.log(`기업 "${company.company_name}" 구글 스크래핑 시작 (검색: ${company.company_name})`);
-          this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'starting' });
-          const googleCount = await runWithRetry(
-            { portal: 'google', companyLabel },
-            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'google')
-          );
-          successCount += googleCount;
-          console.log(`기업 "${company.company_name}" 구글 스크래핑 완료: ${googleCount}개 리뷰 저장`);
-          this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'done' });
-        } catch (error) {
-          errorCount++;
-          console.error(`구글 스크래핑 실패 (${companyLabel}):`, error);
-          await this.appendJobError(
-            job.id,
-            `google 실패 (${companyLabel}): ${error?.message || String(error)}`
-          );
+        if (enabledPortals.includes('google')) {
+          try {
+            console.log(`기업 "${company.company_name}" 구글 스크래핑 시작 (검색: ${company.company_name})`);
+            this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'starting' });
+            const googleCount = await runWithRetry(
+              { portal: 'google', companyLabel },
+              () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'google')
+            );
+            successCount += googleCount;
+            console.log(`기업 "${company.company_name}" 구글 스크래핑 완료: ${googleCount}개 리뷰 저장`);
+            this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'done' });
+          } catch (error) {
+            errorCount++;
+            console.error(`구글 스크래핑 실패 (${companyLabel}):`, error);
+            await this.appendJobError(
+              job.id,
+              `google 실패 (${companyLabel}): ${error?.message || String(error)}`
+            );
+          }
         }
       }
 

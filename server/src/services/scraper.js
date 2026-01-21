@@ -662,11 +662,11 @@ class ScraperService {
           // 더보기 버튼이 사라질 때까지 계속 클릭
           let moreButtonExists = true;
           let clickCount = 0;
-          const maxClicks = 2; // 테스트 기간 동안 2페이지만 읽어오기
+          const maxClicks = 100; // 최대 100페이지까지 로드 (실제로는 버튼이 사라질 때까지)
           let lastReviewCount = 0;
           let noChangeCount = 0; // 리뷰 개수가 변하지 않은 연속 횟수
           
-          console.log('더보기 버튼 클릭 시작 (테스트: 2페이지만 로드)...');
+          console.log('더보기 버튼 클릭 시작 (모든 리뷰 로드)...');
           
           // 초기 리뷰 개수 확인
           const initialReviewButtons = frame.locator('ul#_review_list > li.place_apply_pui');
@@ -1385,8 +1385,26 @@ class ScraperService {
               // review_keyword 추출 (사용자 제공 선택자 사용)
               // 선택자: #_review_list > li:nth-child(4) > div.pui__HLNvmI > span:nth-child(1), span:nth-child(2) 등
               // 각 span을 개별적으로 추출
+              // 먼저 "펼쳐보기" 버튼이 있으면 클릭하여 모든 키워드 표시
               const keywords = [];
               try {
+                // "펼쳐보기" 버튼 클릭 (키워드 펼치기)
+                const keywordMoreButton = container.locator('a.pui__jhpEyP.pui__ggzZJ8[data-pui-click-code="keywordmore"]').first();
+                const keywordMoreButtonCount = await keywordMoreButton.count();
+                if (keywordMoreButtonCount > 0) {
+                  try {
+                    const isVisible = await keywordMoreButton.isVisible().catch(() => false);
+                    if (isVisible) {
+                      await keywordMoreButton.scrollIntoViewIfNeeded();
+                      await this.page.waitForTimeout(500);
+                      await keywordMoreButton.click({ timeout: 5000 });
+                      await this.page.waitForTimeout(1000); // 키워드 펼쳐지는 시간 대기
+                    }
+                  } catch (e) {
+                    // 펼쳐보기 버튼 클릭 실패는 무시하고 계속 진행
+                  }
+                }
+                
                 const keywordContainer = container.locator('div.pui__HLNvmI').first();
                 const keywordContainerCount = await keywordContainer.count();
                 if (keywordContainerCount > 0) {
@@ -1402,7 +1420,11 @@ class ScraperService {
                       
                       const spanText = await spanElement.textContent().catch(() => '');
                       if (spanText && spanText.trim().length > 0) {
-                        keywords.push(spanText.trim());
+                        const trimmedText = spanText.trim();
+                        // "펼쳐보기", "접기" 같은 버튼 텍스트는 제외
+                        if (trimmedText !== '펼쳐보기' && trimmedText !== '접기' && trimmedText !== '더보기') {
+                          keywords.push(trimmedText);
+                        }
                       }
                       spanIndex++;
                     } catch (e) {
@@ -2616,6 +2638,54 @@ class ScraperService {
         }
       } catch (e) {
         console.log('리뷰 섹션으로 이동 실패:', e.message);
+      }
+      
+      // 최신순 정렬 시도 (구글 리뷰는 기본적으로 최신순이지만 명시적으로 확인)
+      try {
+        // 정렬 드롭다운 또는 버튼 찾기
+        const sortSelectors = [
+          'button[aria-label*="Sort"]',
+          'button:has-text("Sort")',
+          'button:has-text("정렬")',
+          '[aria-label*="sort"]',
+          '[aria-label*="Sort"]',
+        ];
+        
+        for (const selector of sortSelectors) {
+          const sortButton = this.page.locator(selector);
+          const count = await sortButton.count();
+          if (count > 0) {
+            const isVisible = await sortButton.first().isVisible().catch(() => false);
+            if (isVisible) {
+              await sortButton.first().scrollIntoViewIfNeeded();
+              await this.page.waitForTimeout(500);
+              await sortButton.first().click({ timeout: 5000 });
+              await this.page.waitForTimeout(2000);
+              
+              // "Newest" 또는 "최신순" 옵션 선택
+              const newestOptions = [
+                'button:has-text("Newest")',
+                'button:has-text("최신순")',
+                '[aria-label*="Newest"]',
+                '[aria-label*="최신순"]',
+              ];
+              
+              for (const optionSelector of newestOptions) {
+                const option = this.page.locator(optionSelector);
+                const optionCount = await option.count();
+                if (optionCount > 0) {
+                  await option.first().click({ timeout: 3000 });
+                  await this.page.waitForTimeout(2000);
+                  console.log('최신순 정렬 선택 완료');
+                  break;
+                }
+              }
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.log('최신순 정렬 선택 실패 (기본 정렬 사용):', e.message);
       }
       
       // 무한 스크롤로 리뷰 로드
@@ -4258,28 +4328,63 @@ class ScraperService {
         
         // 다음 페이지로 이동
         try {
-          const nextPageNav = this.page.locator('#reviews-panel-1 > div:nth-child(2) > div > nav > ul');
-          const navCount = await nextPageNav.count();
-          if (navCount > 0) {
-            // 다음 페이지 버튼 찾기
-            const nextButton = nextPageNav.locator('li:has-text("Next"), li:has-text("다음"), a[aria-label*="Next"], a[aria-label*="다음"]');
-            const nextCount = await nextButton.count();
-            if (nextCount > 0) {
-              const isDisabled = await nextButton.first().getAttribute('disabled').catch(() => null);
-              if (!isDisabled) {
-                await nextButton.first().click({ timeout: 5000 });
-                await this.page.waitForTimeout(3000);
-                pageNum++;
-                continue;
+          // 다양한 선택자로 다음 페이지 버튼 찾기
+          const nextPageSelectors = [
+            '#reviews-panel-1 > div:nth-child(2) > div > nav > ul li:has-text("Next")',
+            '#reviews-panel-1 > div:nth-child(2) > div > nav > ul li:has-text("다음")',
+            '#reviews-panel-1 > div:nth-child(2) > div > nav > ul a[aria-label*="Next"]',
+            '#reviews-panel-1 > div:nth-child(2) > div > nav > ul a[aria-label*="다음"]',
+            'nav[aria-label*="pagination"] a[aria-label*="Next"]',
+            'nav[aria-label*="pagination"] a[aria-label*="다음"]',
+            'button[aria-label*="Next"]',
+            'button[aria-label*="다음"]',
+            'a:has-text("Next")',
+            'a:has-text("다음")',
+            '[data-testid*="next"]',
+            '[class*="next"]:not([class*="disabled"])',
+          ];
+          
+          let nextPageFound = false;
+          for (const selector of nextPageSelectors) {
+            try {
+              const nextButton = this.page.locator(selector);
+              const nextCount = await nextButton.count();
+              if (nextCount > 0) {
+                const isVisible = await nextButton.first().isVisible().catch(() => false);
+                if (isVisible) {
+                  // disabled 속성 확인
+                  const isDisabled = await nextButton.first().getAttribute('disabled').catch(() => null);
+                  const hasDisabledClass = await nextButton.first().evaluate((el) => {
+                    return el.classList.contains('disabled') || el.classList.contains('disabled');
+                  }).catch(() => false);
+                  
+                  if (!isDisabled && !hasDisabledClass) {
+                    await nextButton.first().scrollIntoViewIfNeeded();
+                    await this.page.waitForTimeout(1000);
+                    await nextButton.first().click({ timeout: 5000 });
+                    await this.page.waitForTimeout(4000); // 페이지 로딩 대기 시간 증가
+                    pageNum++;
+                    console.log(`아고다 ${pageNum}페이지로 이동 완료`);
+                    nextPageFound = true;
+                    break;
+                  }
+                }
               }
+            } catch (e) {
+              // 다음 선택자 시도
+              continue;
             }
+          }
+          
+          if (!nextPageFound) {
+            console.log('다음 페이지 버튼을 찾을 수 없습니다. 모든 페이지 수집 완료.');
+            break;
           }
         } catch (e) {
           // 다음 페이지로 이동 실패
+          console.log('다음 페이지로 이동 실패:', e.message);
+          break;
         }
-        
-        // 다음 페이지로 이동할 수 없으면 종료
-        break;
       }
       
       console.log(`아고다 스크래핑 완료: ${reviews.length}개 리뷰 발견`);

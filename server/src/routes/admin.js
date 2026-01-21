@@ -34,14 +34,28 @@ router.post('/jobs/start', async (req, res) => {
     }
 
     // 날짜 필터 옵션 (기본값: 'week')
-    const { dateFilter = 'week', companyName = null } = req.body;
+    const { dateFilter = 'week', companyName = null, portals = null } = req.body;
     
     if (dateFilter !== 'all' && dateFilter !== 'week' && dateFilter !== 'twoWeeks') {
       return res.status(400).json({ error: 'dateFilter는 "all", "week", "twoWeeks" 중 하나여야 합니다.' });
     }
+    
+    // portals 검증: 배열이거나 null이어야 함
+    if (portals !== null && (!Array.isArray(portals) || portals.length === 0)) {
+      return res.status(400).json({ error: 'portals는 배열이거나 null이어야 합니다.' });
+    }
+    
+    // portals 값 검증: 유효한 포털 이름만 허용
+    const validPortals = ['naver', 'kakao', 'yanolja', 'agoda', 'google'];
+    if (portals && Array.isArray(portals)) {
+      const invalidPortals = portals.filter(p => !validPortals.includes(p));
+      if (invalidPortals.length > 0) {
+        return res.status(400).json({ error: `유효하지 않은 포털: ${invalidPortals.join(', ')}. 유효한 포털: ${validPortals.join(', ')}` });
+      }
+    }
 
     // 비동기로 실행 (응답은 즉시 반환)
-    jobService.runScrapingJob(dateFilter, companyName).catch((error) => {
+    jobService.runScrapingJob(dateFilter, companyName, portals).catch((error) => {
       console.error('스크래핑 작업 실행 오류:', error);
     });
 

@@ -67,6 +67,15 @@ export default function Home() {
   const [companyName, setCompanyName] = useState<string>('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
+  const [selectedPortals, setSelectedPortals] = useState<string[]>(['naver', 'kakao', 'yanolja', 'agoda', 'google']);
+  
+  const availablePortals = [
+    { id: 'naver', name: '네이버맵' },
+    { id: 'kakao', name: '카카오맵' },
+    { id: 'yanolja', name: '야놀자' },
+    { id: 'agoda', name: '아고다' },
+    { id: 'google', name: '구글' },
+  ];
 
   // 상태 조회
   const fetchStatus = async () => {
@@ -161,6 +170,7 @@ export default function Home() {
         body: JSON.stringify({
           dateFilter: dateFilter, // 'all', 'week', 'twoWeeks'
           companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
+          portals: selectedPortals.length > 0 ? selectedPortals : null, // 선택된 포털 (빈 배열이면 null = 전체)
         }),
       });
       
@@ -191,7 +201,10 @@ export default function Home() {
       }
       
       const companyText = companyName.trim() ? ` (기업: ${companyName.trim()})` : ' (전체 기업)';
-      setMessage(`시작 요청 완료 (${filterText}${companyText})`);
+      const portalText = selectedPortals.length < availablePortals.length 
+        ? ` (포털: ${selectedPortals.map(id => availablePortals.find(p => p.id === id)?.name).join(', ')})`
+        : '';
+      setMessage(`시작 요청 완료 (${filterText}${companyText}${portalText})`);
       setTimeout(() => {
         fetchStatus();
         fetchRecentJobs();
@@ -372,6 +385,38 @@ export default function Home() {
               {companyName.trim() 
                 ? `"${companyName.trim()}" 기업만 스크랩합니다.` 
                 : '모든 기업을 스크랩합니다.'}
+            </p>
+          </div>
+
+          {/* 포털 선택 */}
+          <div className={styles.filterSection}>
+            <label className={styles.filterLabel}>스크래핑할 포털 선택:</label>
+            <div className={styles.portalCheckboxes}>
+              {availablePortals.map((portal) => (
+                <label key={portal.id} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPortals.includes(portal.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPortals([...selectedPortals, portal.id]);
+                      } else {
+                        setSelectedPortals(selectedPortals.filter((p) => p !== portal.id));
+                      }
+                    }}
+                    disabled={loading || isRunning}
+                    className={styles.checkboxInput}
+                  />
+                  <span>{portal.name}</span>
+                </label>
+              ))}
+            </div>
+            <p className={styles.filterDescription}>
+              {selectedPortals.length === 0
+                ? '⚠️ 최소 1개 이상의 포털을 선택해야 합니다.'
+                : selectedPortals.length === availablePortals.length
+                ? '모든 포털을 스크랩합니다.'
+                : `${selectedPortals.map((id) => availablePortals.find((p) => p.id === id)?.name).join(', ')} 포털만 스크랩합니다.`}
             </p>
           </div>
 
