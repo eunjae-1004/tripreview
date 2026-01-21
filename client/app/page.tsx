@@ -28,6 +28,13 @@ interface Job {
   created_at: string;
 }
 
+interface Progress {
+  company: string | null;
+  portal: string | null;
+  attempt: number | null;
+  phase: string | null;
+}
+
 interface Company {
   id: number;
   company_name: string;
@@ -55,6 +62,7 @@ export default function Home() {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [progressLine, setProgressLine] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('week');
   const [companyName, setCompanyName] = useState<string>('');
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -71,6 +79,20 @@ export default function Home() {
       const data = await response.json();
       setIsRunning(data.isRunning);
       setCurrentJob(data.currentJob);
+
+      // 진행 상황 한 줄 표시 (로그 누적 X)
+      const p: Progress | null = data.progress || null;
+      if (data.isRunning && p) {
+        const companyText = p.company ? `${p.company}` : '-';
+        const portalText = p.portal ? `${p.portal}` : '-';
+        const attemptText = p.attempt ? `${p.attempt}` : '-';
+        const phaseText = p.phase ? `${p.phase}` : '-';
+        setProgressLine(`진행: 기업=${companyText} | 포털=${portalText} | 시도=${attemptText} | 상태=${phaseText}`);
+      } else if (data.isRunning) {
+        setProgressLine('진행: 준비 중...');
+      } else {
+        setProgressLine('');
+      }
     } catch (error) {
       console.error('상태 조회 실패:', error);
     }
@@ -124,6 +146,7 @@ export default function Home() {
   // 작업 시작
   const handleStart = async () => {
     setLoading(true);
+    // 메시지 박스는 진행상황 한 줄을 보여주는 용도로 사용 (누적 로그 X)
     setMessage(null);
     try {
       console.log(`[API] 작업 시작 요청: ${API_URL}/api/admin/jobs/start`);
@@ -168,7 +191,7 @@ export default function Home() {
       }
       
       const companyText = companyName.trim() ? ` (기업: ${companyName.trim()})` : ' (전체 기업)';
-      setMessage(`스크래핑 작업이 시작되었습니다. (${filterText}${companyText})`);
+      setMessage(`시작 요청 완료 (${filterText}${companyText})`);
       setTimeout(() => {
         fetchStatus();
         fetchRecentJobs();
@@ -389,6 +412,9 @@ export default function Home() {
           </div>
           {message && (
             <div className={styles.message}>{message}</div>
+          )}
+          {isRunning && progressLine && (
+            <div className={styles.message}>{progressLine}</div>
           )}
         </section>
 

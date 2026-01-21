@@ -1003,6 +1003,57 @@ class ScraperService {
               // 선택자: .pui__gfuUIT time
               let date = null;
               let reviewDate = null;
+              let skippedNoDate = false;
+
+              const parseNaverRelativeOrPartialDate = (raw) => {
+                if (!raw) return null;
+                const t = String(raw).trim();
+                if (!t) return null;
+
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                // 상대 표현: 오늘/어제
+                if (t.includes('오늘')) {
+                  return { dateStr: today.toISOString().split('T')[0], dateObj: today };
+                }
+                if (t.includes('어제')) {
+                  const d = new Date(today);
+                  d.setDate(d.getDate() - 1);
+                  return { dateStr: d.toISOString().split('T')[0], dateObj: d };
+                }
+
+                // 상대 표현: N일 전 / N주 전 / N개월 전
+                const relMatch = t.match(/(\d+)\s*(일|주|개월)\s*전/);
+                if (relMatch) {
+                  const n = parseInt(relMatch[1], 10);
+                  const unit = relMatch[2];
+                  const d = new Date(today);
+                  if (unit === '일') d.setDate(d.getDate() - n);
+                  if (unit === '주') d.setDate(d.getDate() - n * 7);
+                  if (unit === '개월') d.setMonth(d.getMonth() - n);
+                  return { dateStr: d.toISOString().split('T')[0], dateObj: d };
+                }
+
+                // "MM.DD." 또는 "M.D." 형태(연도 없음) → 올해로 가정
+                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})\./);
+                if (mdMatch) {
+                  const month = mdMatch[1].padStart(2, '0');
+                  const day = mdMatch[2].padStart(2, '0');
+                  const year = String(today.getFullYear());
+                  const dateStr = `${year}-${month}-${day}`;
+                  const d = new Date(dateStr);
+                  // 만약 미래 날짜로 파싱되면 작년으로 보정 (예: 1월에 12.31. 같은 케이스)
+                  if (d > today) {
+                    const prevYear = String(today.getFullYear() - 1);
+                    const prevStr = `${prevYear}-${month}-${day}`;
+                    return { dateStr: prevStr, dateObj: new Date(prevStr) };
+                  }
+                  return { dateStr, dateObj: d };
+                }
+
+                return null;
+              };
               
               try {
                 const dateElement = container.locator('.pui__gfuUIT time').first();
@@ -1017,6 +1068,13 @@ class ScraperService {
                     // datetime 속성이 없으면 텍스트에서 추출
                     const dateText = await dateElement.textContent().catch(() => '');
                     if (dateText) {
+                      // 상대/부분 날짜 처리 ("오늘", "어제", "3일 전", "1.20.")
+                      const rel = parseNaverRelativeOrPartialDate(dateText);
+                      if (rel) {
+                        date = rel.dateStr;
+                        reviewDate = rel.dateObj;
+                      }
+
                       // 날짜 패턴 파싱 ("25.12.20.토" 형태)
                       const datePatterns = [
                         /(\d{2})\.(\d{1,2})\.(\d{1,2})\./,           // "25.12.20." (요일 제거)
@@ -1025,6 +1083,7 @@ class ScraperService {
                       ];
                       
                       for (const pattern of datePatterns) {
+                        if (date) break; // 이미 상대/부분 날짜로 파싱됨
                         const dateMatch = dateText.match(pattern);
                         if (dateMatch) {
                           let year, month, day;
@@ -1053,10 +1112,14 @@ class ScraperService {
                 // 날짜 찾기 실패
               }
               
-              // 날짜가 없으면 오늘 날짜 사용
+              // 날짜가 없으면 "오늘 날짜로 저장"하지 말고 스킵 (오늘로 저장되면 데이터 신뢰도가 깨짐)
               if (!date) {
-                date = new Date().toISOString().split('T')[0];
-                reviewDate = new Date();
+                skippedNoDate = true;
+              }
+
+              if (skippedNoDate) {
+                // 날짜가 없으면 해당 리뷰는 건너뜀
+                continue;
               }
               
               // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링

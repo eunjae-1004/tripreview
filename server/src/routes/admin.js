@@ -80,10 +80,12 @@ router.get('/jobs/status', async (req, res) => {
   try {
     const currentJob = await jobService.getCurrentJob();
     const isRunning = jobService.getIsRunning();
+    const progress = jobService.getProgress ? jobService.getProgress() : null;
 
     res.json({
       isRunning,
       currentJob: currentJob || null,
+      progress: progress || null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
