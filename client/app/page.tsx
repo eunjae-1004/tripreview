@@ -398,7 +398,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* 포털 선택 */}
+          {/* 포털 선택 - 스크래핑할 포털을 선택하세요 */}
           <div className={styles.filterSection}>
             <label className={styles.filterLabel}>스크래핑할 포털 선택:</label>
             <div className={styles.portalCheckboxes}>
