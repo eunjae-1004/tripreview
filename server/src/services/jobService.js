@@ -10,6 +10,7 @@ class JobService {
     this.isRunning = false;
     this.cancelRequested = false;
     this.currentProgress = null; // { companyName, portal, attempt, phase }
+    this.scraper = null; // 현재 실행 중인 ScraperService 인스턴스 (중지 시 강제 종료용)
   }
 
   setProgress(progress) {
@@ -175,6 +176,7 @@ class JobService {
     this.currentJob = job;
 
     const scraper = new ScraperService();
+    this.scraper = scraper;
     let successCount = 0;
     let errorCount = 0;
 
@@ -404,7 +406,8 @@ class JobService {
       await this.appendJobError(job.id, `job 실패: ${msg}`);
       this.setProgress({ company: null, portal: null, attempt: null, phase: 'failed' });
 
-      if (error?.name === 'JobCancelledError') {
+      // cancelRequested가 켜진 상태에서 발생한 어떤 에러든 "중지"로 처리
+      if (this.cancelRequested || error?.name === 'JobCancelledError') {
         await this.updateJobStatus(job.id, 'stopped', {
           completedAt: new Date(),
           errorMessage: msg,
@@ -421,6 +424,7 @@ class JobService {
       this.currentJob = null;
       this.cancelRequested = false;
       this.currentProgress = null;
+      this.scraper = null;
     }
 
     return job;
@@ -434,10 +438,30 @@ class JobService {
       throw new Error('실행 중인 작업이 없습니다.');
     }
 
-    // 즉시 강제 종료는 어렵고(Playwright 작업 중), 루프가 안전 지점에서 종료되도록 플래그만 설정
     this.cancelRequested = true;
-    await this.appendJobError(this.currentJob.id, '사용자가 중지 요청을 보냈습니다. 안전 지점에서 종료합니다.');
-    return { message: '중지 요청 완료' };
+    this.setProgress({ company: null, portal: null, attempt: null, phase: 'stopping' });
+    await this.appendJobError(this.currentJob.id, '사용자가 중지 요청을 보냈습니다. 브라우저를 종료하여 즉시 중단합니다.');
+
+    // 가능하면 즉시 Playwright를 종료해서 현재 대기/네비게이션을 끊는다
+    try {
+      if (this.scraper) {
+        await this.scraper.close();
+      }
+    } catch (e) {
+      // close 실패해도 계속 진행
+    }
+
+    // UI/상태 조회가 즉시 반영되도록 stopped로 업데이트
+    await this.updateJobStatus(this.currentJob.id, 'stopped', {
+      completedAt: new Date(),
+      errorMessage: '사용자 중지 요청',
+    });
+
+    // 즉시 상태 플래그도 내려서 /jobs/status에서 running이 안 뜨게
+    this.isRunning = false;
+    this.currentJob = null;
+
+    return { message: '스크래핑 작업이 중지되었습니다.' };
   }
 
   /**
