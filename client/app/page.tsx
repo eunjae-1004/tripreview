@@ -444,6 +444,14 @@ export default function Home() {
                     </span>
                   </div>
                 )}
+                {currentJob.error_message && (
+                  <div className={styles.statusItem}>
+                    <span className={styles.label}>오류 메시지:</span>
+                    <span className={styles.value} style={{ color: '#F44336', whiteSpace: 'pre-wrap' }}>
+                      {currentJob.error_message}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
