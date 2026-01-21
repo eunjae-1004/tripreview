@@ -16,27 +16,12 @@ console.log(`- PORT: ${process.env.PORT || '미설정 (기본값 3000 사용)'}`
 console.log(`- NODE_ENV: ${process.env.NODE_ENV || '미설정'}`);
 console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : '미설정'}`);
 
-// 미들웨어
-app.use(cors());
-app.use(express.json());
-
-// 라우트
-app.use('/api/admin', adminRoutes);
-
-// Health check (루트 경로와 /health 모두 지원)
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    message: 'Trip Review Server is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
+// Health check를 가장 먼저 등록 (서버 시작 전에도 응답 가능)
+// Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
 app.get('/health', (req, res) => {
   // Railway Healthcheck 로깅
   console.log(`[Healthcheck] 요청 수신 - serverReady: ${serverReady}, uptime: ${process.uptime()}`);
   
-  // Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
   // Express 서버가 시작되면 이미 요청을 처리할 수 있으므로 항상 200 반환
   const response = {
     status: serverReady ? 'ok' : 'starting',
@@ -50,6 +35,22 @@ app.get('/health', (req, res) => {
   
   console.log(`[Healthcheck] 응답: ${JSON.stringify(response)}`);
   res.status(200).json(response);
+});
+
+// 미들웨어
+app.use(cors());
+app.use(express.json());
+
+// 라우트
+app.use('/api/admin', adminRoutes);
+
+// Health check (루트 경로)
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Trip Review Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // 매주 월요일 새벽 2시에 자동 실행
@@ -84,12 +85,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   if (process.env.NODE_ENV === 'production') {
     // Healthcheck 엔드포인트가 즉시 응답할 수 있도록 확인
     console.log(`[Railway] Healthcheck 엔드포인트 준비 완료: /health`);
+    console.log(`[Railway] 서버가 Healthcheck 요청을 받을 준비가 되었습니다.`);
     
-    // 프로덕션 환경에서만 READY 신호 출력
-    setTimeout(() => {
-      process.stdout.write('READY\n');
-      console.log(`[Railway] READY 신호 전송 완료`);
-    }, 1000);
+    // 프로덕션 환경에서만 READY 신호 출력 (Railway가 서버 준비 상태를 확인)
+    // Railway는 Healthcheck를 호출하지만, READY 신호도 확인할 수 있음
+    process.stdout.write('READY\n');
+    console.log(`[Railway] READY 신호 전송 완료`);
   }
 });
 
