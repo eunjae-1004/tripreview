@@ -285,7 +285,7 @@ class JobService {
         ? portals 
         : ['naver', 'kakao', 'yanolja', 'agoda', 'google']; // 기본값: 모든 포털
       
-      console.log(`스크래핑할 포털: ${enabledPortals.join(', ')}`);
+      console.log(`[작업 시작] 스크래핑할 포털: ${enabledPortals.join(', ')} (입력: ${portals ? JSON.stringify(portals) : 'null'})`);
 
       for (const company of companies.rows) {
         this.ensureNotCancelled();

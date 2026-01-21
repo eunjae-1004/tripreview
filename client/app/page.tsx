@@ -154,12 +154,25 @@ export default function Home() {
 
   // 작업 시작
   const handleStart = async () => {
+    // 포털 선택 검증
+    if (selectedPortals.length === 0) {
+      setMessage('⚠️ 최소 1개 이상의 포털을 선택해야 합니다.');
+      return;
+    }
+    
     setLoading(true);
     // 메시지 박스는 진행상황 한 줄을 보여주는 용도로 사용 (누적 로그 X)
     setMessage(null);
     try {
+      const requestBody = {
+        dateFilter: dateFilter, // 'all', 'week', 'twoWeeks'
+        companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
+        portals: selectedPortals.length > 0 ? selectedPortals : null, // 선택된 포털 (빈 배열이면 null = 전체)
+      };
+      
       console.log(`[API] 작업 시작 요청: ${API_URL}/api/admin/jobs/start`);
       console.log(`[API] Admin Secret: ${ADMIN_SECRET ? '설정됨' : '미설정'}`);
+      console.log(`[API] 요청 본문:`, requestBody);
       
       const response = await fetch(`${API_URL}/api/admin/jobs/start`, {
         method: 'POST',
@@ -167,24 +180,21 @@ export default function Home() {
           'Content-Type': 'application/json',
           'x-admin-secret': ADMIN_SECRET,
         },
-        body: JSON.stringify({
-          dateFilter: dateFilter, // 'all', 'week', 'twoWeeks'
-          companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
-          portals: selectedPortals.length > 0 ? selectedPortals : null, // 선택된 포털 (빈 배열이면 null = 전체)
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       console.log(`[API] 응답 상태: ${response.status} ${response.statusText}`);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[API] 에러 응답:`, errorText);
+        console.error(`[API] 에러 응답 (${response.status}):`, errorText);
         try {
           const errorData = JSON.parse(errorText);
-          setMessage(`오류: ${errorData.error || '알 수 없는 오류'}`);
+          setMessage(`❌ 오류: ${errorData.error || '알 수 없는 오류'}`);
         } catch {
-          setMessage(`오류: ${response.status} ${response.statusText} - ${errorText}`);
+          setMessage(`❌ 오류: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
         }
+        setLoading(false);
         return;
       }
       
@@ -204,7 +214,7 @@ export default function Home() {
       const portalText = selectedPortals.length < availablePortals.length 
         ? ` (포털: ${selectedPortals.map(id => availablePortals.find(p => p.id === id)?.name).join(', ')})`
         : '';
-      setMessage(`시작 요청 완료 (${filterText}${companyText}${portalText})`);
+      setMessage(`✅ 시작 요청 완료 (${filterText}${companyText}${portalText})`);
       setTimeout(() => {
         fetchStatus();
         fetchRecentJobs();

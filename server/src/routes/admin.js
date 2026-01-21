@@ -54,6 +54,9 @@ router.post('/jobs/start', async (req, res) => {
       }
     }
 
+    // portals 로깅
+    console.log(`[작업 시작] dateFilter: ${dateFilter}, companyName: ${companyName || 'null'}, portals: ${portals ? JSON.stringify(portals) : 'null'}`);
+
     // 비동기로 실행 (응답은 즉시 반환)
     jobService.runScrapingJob(dateFilter, companyName, portals).catch((error) => {
       console.error('스크래핑 작업 실행 오류:', error);
@@ -69,7 +72,10 @@ router.post('/jobs/start', async (req, res) => {
     }
     
     const companyText = companyName ? ` (기업: ${companyName})` : ' (전체 기업)';
-    res.json({ message: `스크래핑 작업이 시작되었습니다. (${filterText}${companyText})` });
+    const portalText = portals && Array.isArray(portals) && portals.length > 0 
+      ? ` (포털: ${portals.join(', ')})` 
+      : '';
+    res.json({ message: `스크래핑 작업이 시작되었습니다. (${filterText}${companyText}${portalText})` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
