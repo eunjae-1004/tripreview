@@ -8,6 +8,11 @@ const router = express.Router();
  * 실제로는 JWT 토큰 기반 인증을 사용하는 것이 좋습니다.
  */
 const authenticateAdmin = (req, res, next) => {
+  // OPTIONS 요청은 CORS preflight이므로 인증을 건너뜀
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
   const adminSecret = req.headers['x-admin-secret'];
   if (adminSecret === process.env.ADMIN_PASSWORD) {
     next();

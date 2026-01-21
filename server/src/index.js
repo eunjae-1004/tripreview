@@ -38,7 +38,13 @@ app.get('/health', (req, res) => {
 });
 
 // 미들웨어
-app.use(cors());
+// CORS 설정 - 모든 도메인에서 접근 허용
+app.use(cors({
+  origin: '*', // 모든 도메인 허용
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-admin-secret'],
+  credentials: false
+}));
 app.use(express.json());
 
 // 요청 로깅 (프로덕션 환경에서도 API 요청 로깅)
