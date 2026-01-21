@@ -123,13 +123,42 @@ class ScraperService {
     } = reviewData;
 
     try {
-      // reviewDate가 Date 객체인 경우 문자열로 변환
-      let reviewDateStr = reviewDate;
-      if (reviewDate instanceof Date) {
+      // reviewDate 안전 변환
+      // - Date 객체라도 Invalid Date면 toISOString()이 터지므로 검증 필요
+      // - 문자열도 YYYY-MM-DD 형태인지 검증
+      let reviewDateStr = null;
+
+      const isValidDateObj = (d) => d instanceof Date && !Number.isNaN(d.getTime());
+      const normalizeDateStr = (s) => {
+        if (!s) return null;
+        const t = String(s).trim();
+        if (!t) return null;
+        // 허용: YYYY-MM-DD
+        const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        const dt = new Date(t);
+        if (Number.isNaN(dt.getTime())) return null;
+        return t;
+      };
+
+      if (isValidDateObj(reviewDate)) {
         reviewDateStr = reviewDate.toISOString().split('T')[0];
       } else if (typeof reviewDate === 'string') {
-        // 이미 문자열인 경우 그대로 사용
-        reviewDateStr = reviewDate;
+        reviewDateStr = normalizeDateStr(reviewDate);
+      } else if (reviewDate !== null && reviewDate !== undefined) {
+        // 숫자 타임스탬프 등 들어오는 경우 방어
+        const dt = new Date(reviewDate);
+        if (!Number.isNaN(dt.getTime())) {
+          reviewDateStr = dt.toISOString().split('T')[0];
+        }
+      }
+
+      // 날짜가 유효하지 않으면 저장 스킵 (안정성)
+      if (!reviewDateStr) {
+        console.log(
+          `⚠️ 리뷰 저장 스킵: 유효하지 않은 reviewDate (portal="${portalUrl}", company="${companyName}", nickname="${nickname}", reviewDate="${reviewDate}")`
+        );
+        return false;
       }
 
       // rating 값 검증 및 제한 (NUMERIC(3,2)는 최대 9.99까지만 허용)
