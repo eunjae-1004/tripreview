@@ -892,6 +892,7 @@ class ScraperService {
           
           // 리뷰 추출 (업데이트된 로케이터 사용)
           const maxReviews = authorButtonCount;
+          let naverNoDateSkipCount = 0;
           
           // 모든 리뷰를 가져오도록 수정
           for (let i = 0; i < maxReviews; i++) {
@@ -1056,56 +1057,70 @@ class ScraperService {
               };
               
               try {
-                const dateElement = container.locator('.pui__gfuUIT time').first();
-                const dateCount = await dateElement.count();
-                if (dateCount > 0) {
-                  // datetime 속성에서 날짜 추출
-                  const datetime = await dateElement.getAttribute('datetime').catch(() => '');
-                  if (datetime) {
-                    date = datetime.split('T')[0]; // ISO 형식에서 날짜만 추출
-                    reviewDate = new Date(datetime);
-                  } else {
-                    // datetime 속성이 없으면 텍스트에서 추출
-                    const dateText = await dateElement.textContent().catch(() => '');
-                    if (dateText) {
-                      // 상대/부분 날짜 처리 ("오늘", "어제", "3일 전", "1.20.")
-                      const rel = parseNaverRelativeOrPartialDate(dateText);
-                      if (rel) {
-                        date = rel.dateStr;
-                        reviewDate = rel.dateObj;
-                      }
+                // 1) 우선순위: `.pui__gfuUIT time`
+                // 2) fallback: 컨테이너 내 `time`
+                // 3) fallback: `.pui__gfuUIT` 텍스트
+                const candidates = [
+                  container.locator('.pui__gfuUIT time').first(),
+                  container.locator('time').first(),
+                ];
 
-                      // 날짜 패턴 파싱 ("25.12.20.토" 형태)
-                      const datePatterns = [
-                        /(\d{2})\.(\d{1,2})\.(\d{1,2})\./,           // "25.12.20." (요일 제거)
-                        /(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/,   // "2025.12.5"
-                        /(\d{2})\.(\d{1,2})\.(\d{1,2})/,           // "25.12.5"
-                      ];
-                      
-                      for (const pattern of datePatterns) {
-                        if (date) break; // 이미 상대/부분 날짜로 파싱됨
-                        const dateMatch = dateText.match(pattern);
-                        if (dateMatch) {
-                          let year, month, day;
-                          
-                          if (dateMatch[1].length === 4) {
-                            // "2025.12.5" 형식
-                            year = dateMatch[1];
-                            month = dateMatch[2].padStart(2, '0');
-                            day = dateMatch[3].padStart(2, '0');
-                          } else {
-                            // "25.12.5" 형식
-                            year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
-                            month = dateMatch[2].padStart(2, '0');
-                            day = dateMatch[3].padStart(2, '0');
-                          }
-                          
-                          date = `${year}-${month}-${day}`;
-                          reviewDate = new Date(date);
-                          break;
-                        }
-                      }
+                for (const candidate of candidates) {
+                  if (date) break;
+                  const cnt = await candidate.count().catch(() => 0);
+                  if (!cnt) continue;
+
+                  const datetime = await candidate.getAttribute('datetime').catch(() => '');
+                  if (datetime) {
+                    date = datetime.split('T')[0];
+                    reviewDate = new Date(datetime);
+                    break;
+                  }
+
+                  const dateText = await candidate.textContent().catch(() => '');
+                  if (dateText) {
+                    const rel = parseNaverRelativeOrPartialDate(dateText);
+                    if (rel) {
+                      date = rel.dateStr;
+                      reviewDate = rel.dateObj;
+                      break;
                     }
+
+                    const datePatterns = [
+                      /(\d{2})\.(\d{1,2})\.(\d{1,2})\./,
+                      /(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/,
+                      /(\d{2})\.(\d{1,2})\.(\d{1,2})/,
+                    ];
+
+                    for (const pattern of datePatterns) {
+                      const dateMatch = dateText.match(pattern);
+                      if (!dateMatch) continue;
+                      let year, month, day;
+                      if (dateMatch[1].length === 4) {
+                        year = dateMatch[1];
+                        month = dateMatch[2].padStart(2, '0');
+                        day = dateMatch[3].padStart(2, '0');
+                      } else {
+                        year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
+                        month = dateMatch[2].padStart(2, '0');
+                        day = dateMatch[3].padStart(2, '0');
+                      }
+                      date = `${year}-${month}-${day}`;
+                      reviewDate = new Date(date);
+                      break;
+                    }
+
+                    if (date) break;
+                  }
+                }
+
+                // 마지막 fallback: `.pui__gfuUIT` 텍스트에서 상대/부분 날짜 파싱
+                if (!date) {
+                  const gfuText = await container.locator('.pui__gfuUIT').first().textContent().catch(() => '');
+                  const rel2 = parseNaverRelativeOrPartialDate(gfuText);
+                  if (rel2) {
+                    date = rel2.dateStr;
+                    reviewDate = rel2.dateObj;
                   }
                 }
               } catch (e) {
@@ -1119,6 +1134,12 @@ class ScraperService {
 
               if (skippedNoDate) {
                 // 날짜가 없으면 해당 리뷰는 건너뜀
+                naverNoDateSkipCount++;
+                if (naverNoDateSkipCount <= 3) {
+                  console.log(
+                    `⚠️ [네이버맵] 날짜 파싱 실패로 리뷰 스킵 (샘플 ${naverNoDateSkipCount}/3): nickname="${nickname}", text="${(allText || '').trim().slice(0, 80)}..."`
+                  );
+                }
                 continue;
               }
               
@@ -1335,6 +1356,10 @@ class ScraperService {
               console.error(`리뷰 ${i} 추출 오류:`, err.message);
             }
           }
+
+          if (naverNoDateSkipCount > 0) {
+            console.log(`⚠️ [네이버맵] 날짜 파싱 실패로 스킵된 리뷰: ${naverNoDateSkipCount}개`);
+          }
           
           // 리뷰를 찾지 못한 경우, 전체 텍스트에서 패턴 찾기
           if (reviews.length === 0) {
@@ -1348,18 +1373,26 @@ class ScraperService {
             let reviewIndex = 0;
             
             while ((match = reviewPattern.exec(allText)) !== null && reviewIndex < 10) {
+              const parsedDate = (() => {
+                const dateMatch = match[3].match(/(\d{2})\.(\d{1,2})\.(\d{1,2})/);
+                if (dateMatch) {
+                  const year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
+                  return `${year}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
+                }
+                return null;
+              })();
+
+              // 날짜를 파싱하지 못하면 오늘로 저장하지 않고 스킵
+              if (!parsedDate) {
+                naverNoDateSkipCount++;
+                continue;
+              }
+
               reviews.push({
                 content: match[0].substring(0, 500),
                 rating: parseFloat(match[2] || '0'),
                 nickname: match[1] || `사용자${reviewIndex + 1}`,
-                date: (() => {
-                  const dateMatch = match[3].match(/(\d{2})\.(\d{1,2})\.(\d{1,2})/);
-                  if (dateMatch) {
-                    const year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
-                    return `${year}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
-                  }
-                  return new Date().toISOString().split('T')[0];
-                })(),
+                date: parsedDate,
                 visitKeyword: null,
                 reviewKeyword: null,
                 visitType: null,
