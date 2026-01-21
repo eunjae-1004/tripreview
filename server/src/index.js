@@ -106,6 +106,9 @@ server.on('error', (err) => {
 // 프로세스 종료 시 정리
 process.on('SIGTERM', () => {
   console.log('⚠️ SIGTERM 신호 수신, 서버 종료 중...');
+  console.log('⚠️ Railway가 서버 종료를 요청했습니다.');
+  console.log('⚠️ Healthcheck가 비활성화되어 있으므로 Railway가 서버를 종료시킬 수 있습니다.');
+  
   server.close(() => {
     console.log('✅ HTTP 서버가 종료되었습니다.');
     process.exit(0);
@@ -146,9 +149,11 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // 서버가 종료되지 않도록 keep-alive
+// Railway가 서버를 종료시키지 않도록 주기적으로 활동 신호 전송
 setInterval(() => {
   if (serverReady) {
     // 서버가 정상 실행 중임을 확인
     process.stdout.write('.');
+    console.log(`[Keep-Alive] 서버 실행 중 - uptime: ${process.uptime()}초`);
   }
 }, 30000); // 30초마다
