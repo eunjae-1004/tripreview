@@ -8,6 +8,18 @@ class JobService {
   constructor() {
     this.currentJob = null;
     this.isRunning = false;
+    this.cancelRequested = false;
+  }
+
+  /**
+   * 중지 요청 여부 체크
+   */
+  ensureNotCancelled() {
+    if (this.cancelRequested) {
+      const err = new Error('사용자에 의해 작업이 중지되었습니다.');
+      err.name = 'JobCancelledError';
+      throw err;
+    }
   }
 
   /**
@@ -148,6 +160,7 @@ class JobService {
     }
 
     this.isRunning = true;
+    this.cancelRequested = false;
     this.requirePool();
     const job = await this.createJob();
     this.currentJob = job;
@@ -191,18 +204,76 @@ class JobService {
       }
       console.log(`날짜 필터: ${filterText}`);
 
+      const isLikelyPlaywrightFatal = (message = '') => {
+        const m = String(message).toLowerCase();
+        return (
+          m.includes('target closed') ||
+          m.includes('browser has been closed') ||
+          m.includes('page has been closed') ||
+          m.includes('protocol error') ||
+          m.includes('execution context was destroyed') ||
+          m.includes('cannot find context') ||
+          m.includes('navigation failed because browser has disconnected')
+        );
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      /**
+       * 포털별 안정성 강화:
+       * - 2회 재시도(총 3회)
+       * - Playwright 치명 오류로 보이면 브라우저 재시작 후 재시도
+       */
+      const runWithRetry = async ({ portal, companyLabel }, fn) => {
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          this.ensureNotCancelled();
+          try {
+            return await fn();
+          } catch (error) {
+            const message = error?.message || String(error);
+            const isLast = attempt === maxAttempts;
+            console.error(`[재시도] ${portal} 실패 (${companyLabel}) attempt ${attempt}/${maxAttempts}:`, message);
+
+            // Playwright가 죽은 것으로 보이면 브라우저 재시작
+            if (isLikelyPlaywrightFatal(message)) {
+              await this.appendJobError(job.id, `${portal} 치명 오류로 브라우저 재시작 (${companyLabel}): ${message}`);
+              try {
+                await scraper.close();
+              } catch {}
+              try {
+                await scraper.init();
+              } catch (reinitError) {
+                const reMsg = reinitError?.message || String(reinitError);
+                await this.appendJobError(job.id, `${portal} 브라우저 재시작 실패 (${companyLabel}): ${reMsg}`);
+              }
+            }
+
+            if (isLast) throw error;
+
+            // 간단 backoff (2s, 5s)
+            await sleep(attempt === 1 ? 2000 : 5000);
+          }
+        }
+      };
+
       for (const company of companies.rows) {
+        this.ensureNotCancelled();
         const companyLabel = `company="${company.company_name}"`;
 
         // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
         try {
           console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 시작 (검색: ${company.company_name})`);
-          const naverCount = await scraper.scrapeByPortal(
-            company.naver_url || null,
-            company.company_name,
-            dateFilter,
-            job.id,
-            'naver'
+          const naverCount = await runWithRetry(
+            { portal: 'naver', companyLabel },
+            () =>
+              scraper.scrapeByPortal(
+                company.naver_url || null,
+                company.company_name,
+                dateFilter,
+                job.id,
+                'naver'
+              )
           );
           successCount += naverCount;
           console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 완료: ${naverCount}개 리뷰 저장`);
@@ -217,12 +288,9 @@ class JobService {
 
         try {
           console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 시작 (검색: ${company.company_name})`);
-          const kakaoCount = await scraper.scrapeByPortal(
-            null,
-            company.company_name,
-            dateFilter,
-            job.id,
-            'kakao'
+          const kakaoCount = await runWithRetry(
+            { portal: 'kakao', companyLabel },
+            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'kakao')
           );
           successCount += kakaoCount;
           console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 완료: ${kakaoCount}개 리뷰 저장`);
@@ -237,12 +305,9 @@ class JobService {
 
         try {
           console.log(`기업 "${company.company_name}" 야놀자 스크래핑 시작 (검색: ${company.company_name})`);
-          const yanoljaCount = await scraper.scrapeByPortal(
-            null,
-            company.company_name,
-            dateFilter,
-            job.id,
-            'yanolja'
+          const yanoljaCount = await runWithRetry(
+            { portal: 'yanolja', companyLabel },
+            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'yanolja')
           );
           successCount += yanoljaCount;
           console.log(`기업 "${company.company_name}" 야놀자 스크래핑 완료: ${yanoljaCount}개 리뷰 저장`);
@@ -258,12 +323,9 @@ class JobService {
         if (company.agoda_url) {
           try {
             console.log(`기업 "${company.company_name}" 아고다 스크래핑 시작: ${company.agoda_url}`);
-            const agodaCount = await scraper.scrapeByPortal(
-              company.agoda_url,
-              company.company_name,
-              dateFilter,
-              job.id,
-              'agoda'
+            const agodaCount = await runWithRetry(
+              { portal: 'agoda', companyLabel },
+              () => scraper.scrapeByPortal(company.agoda_url, company.company_name, dateFilter, job.id, 'agoda')
             );
             successCount += agodaCount;
             console.log(`기업 "${company.company_name}" 아고다 스크래핑 완료: ${agodaCount}개 리뷰 저장`);
@@ -281,12 +343,9 @@ class JobService {
 
         try {
           console.log(`기업 "${company.company_name}" 구글 스크래핑 시작 (검색: ${company.company_name})`);
-          const googleCount = await scraper.scrapeByPortal(
-            null,
-            company.company_name,
-            dateFilter,
-            job.id,
-            'google'
+          const googleCount = await runWithRetry(
+            { portal: 'google', companyLabel },
+            () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'google')
           );
           successCount += googleCount;
           console.log(`기업 "${company.company_name}" 구글 스크래핑 완료: ${googleCount}개 리뷰 저장`);
@@ -309,15 +368,25 @@ class JobService {
       await scraper.close();
     } catch (error) {
       console.error('스크래핑 작업 실패:', error);
-      await this.appendJobError(job.id, `job 실패: ${error?.message || String(error)}`);
-      await this.updateJobStatus(job.id, 'failed', {
-        completedAt: new Date(),
-        errorMessage: error.message,
-      });
+      const msg = error?.message || String(error);
+      await this.appendJobError(job.id, `job 실패: ${msg}`);
+
+      if (error?.name === 'JobCancelledError') {
+        await this.updateJobStatus(job.id, 'stopped', {
+          completedAt: new Date(),
+          errorMessage: msg,
+        });
+      } else {
+        await this.updateJobStatus(job.id, 'failed', {
+          completedAt: new Date(),
+          errorMessage: msg,
+        });
+      }
       await scraper.close();
     } finally {
       this.isRunning = false;
       this.currentJob = null;
+      this.cancelRequested = false;
     }
 
     return job;
@@ -331,14 +400,10 @@ class JobService {
       throw new Error('실행 중인 작업이 없습니다.');
     }
 
-    await this.updateJobStatus(this.currentJob.id, 'stopped', {
-      completedAt: new Date(),
-    });
-
-    this.isRunning = false;
-    this.currentJob = null;
-
-    return this.currentJob;
+    // 즉시 강제 종료는 어렵고(Playwright 작업 중), 루프가 안전 지점에서 종료되도록 플래그만 설정
+    this.cancelRequested = true;
+    await this.appendJobError(this.currentJob.id, '사용자가 중지 요청을 보냈습니다. 안전 지점에서 종료합니다.');
+    return { message: '중지 요청 완료' };
   }
 
   /**
