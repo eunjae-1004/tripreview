@@ -18,23 +18,19 @@ console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : '미설�
 
 // Health check를 가장 먼저 등록 (서버 시작 전에도 응답 가능)
 // Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
+// 매우 빠르게 응답하여 스크래핑 작업 중에도 healthcheck가 실패하지 않도록 함
 app.get('/health', (req, res) => {
-  // Railway Healthcheck 로깅
-  console.log(`[Healthcheck] 요청 수신 - serverReady: ${serverReady}, uptime: ${process.uptime()}`);
+  // 최소한의 로깅만 수행 (빠른 응답을 위해)
+  // Railway Healthcheck는 매우 자주 호출되므로 로깅을 최소화
   
-  // Express 서버가 시작되면 이미 요청을 처리할 수 있으므로 항상 200 반환
-  const response = {
-    status: serverReady ? 'ok' : 'starting',
-    message: serverReady ? 'Trip Review Server is running' : 'Server is starting up',
+  // 즉시 응답 (비동기 작업 없이)
+  res.status(200).json({
+    status: 'ok',
+    message: 'Trip Review Server is running',
     timestamp: new Date().toISOString(),
-    ...(serverReady && {
-      uptime: process.uptime(),
-      port: PORT
-    })
-  };
-  
-  console.log(`[Healthcheck] 응답: ${JSON.stringify(response)}`);
-  res.status(200).json(response);
+    uptime: process.uptime(),
+    port: PORT
+  });
 });
 
 // 미들웨어
@@ -110,6 +106,21 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     // Railway는 Healthcheck를 호출하지만, READY 신호도 확인할 수 있음
     process.stdout.write('READY\n');
     console.log(`[Railway] READY 신호 전송 완료`);
+    
+    // Keep-alive: 주기적으로 로그를 출력하여 서버가 살아있음을 Railway에 알림
+    const keepAliveInterval = setInterval(() => {
+      if (serverReady) {
+        console.log(`[Keep-Alive] 서버 실행 중 - uptime: ${process.uptime()}초`);
+      }
+    }, 30000); // 30초마다
+    
+    // 서버 종료 시 interval 정리
+    process.on('SIGTERM', () => {
+      clearInterval(keepAliveInterval);
+    });
+    process.on('SIGINT', () => {
+      clearInterval(keepAliveInterval);
+    });
   }
 });
 
@@ -126,18 +137,26 @@ server.on('error', (err) => {
 process.on('SIGTERM', () => {
   console.log('⚠️ SIGTERM 신호 수신, 서버 종료 중...');
   console.log('⚠️ Railway가 서버 종료를 요청했습니다.');
-  console.log('⚠️ Healthcheck가 비활성화되어 있으므로 Railway가 서버를 종료시킬 수 있습니다.');
+  console.log(`⚠️ 현재 실행 중인 작업: ${jobService.getIsRunning() ? '있음' : '없음'}`);
+  
+  // 실행 중인 스크래핑 작업이 있으면 먼저 중지 시도
+  if (jobService.getIsRunning()) {
+    console.log('⚠️ 실행 중인 스크래핑 작업을 중지합니다...');
+    jobService.stopJob().catch((err) => {
+      console.error('⚠️ 작업 중지 실패:', err);
+    });
+  }
   
   server.close(() => {
     console.log('✅ HTTP 서버가 종료되었습니다.');
     process.exit(0);
   });
   
-  // 강제 종료 타임아웃 (10초)
+  // 강제 종료 타임아웃 (30초로 증가 - 스크래핑 작업 종료 시간 확보)
   setTimeout(() => {
-    console.error('⚠️ 강제 종료: 서버가 10초 내에 종료되지 않았습니다.');
+    console.error('⚠️ 강제 종료: 서버가 30초 내에 종료되지 않았습니다.');
     process.exit(1);
-  }, 10000);
+  }, 30000);
 });
 
 process.on('SIGINT', () => {
