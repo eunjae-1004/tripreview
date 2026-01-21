@@ -4993,13 +4993,49 @@ class ScraperService {
         continue;
       }
       
-      // 날짜 파싱
-      // Google 스크래퍼는 reviewDate(YYYY-MM-DD)를 사용하므로 우선순위를 둔다.
-      const dateStr = (review.reviewDate || review.date || '').toString();
-      let reviewDate = dateStr ? new Date(dateStr) : new Date(Date.now());
-      
+      // 날짜 파싱/정규화
+      // - 저장은 YYYY-MM-DD 문자열로 통일
+      // - Invalid Date로 인해 작업이 멈추지 않도록 방어
+      const rawDate = review.reviewDate ?? review.date ?? null;
+      const normalizeDateStr = (s) => {
+        if (!s) return null;
+        const t = String(s).trim();
+        const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        const dt = new Date(t);
+        if (Number.isNaN(dt.getTime())) return null;
+        return t;
+      };
+      const toIsoDateStr = (d) => {
+        if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+        return d.toISOString().split('T')[0];
+      };
+
+      let reviewDateStr = null;
+      let reviewDateObj = null;
+
+      if (rawDate instanceof Date) {
+        reviewDateStr = toIsoDateStr(rawDate);
+      } else {
+        // 문자열 우선
+        reviewDateStr = normalizeDateStr(rawDate);
+        if (!reviewDateStr && rawDate) {
+          const dt = new Date(String(rawDate));
+          reviewDateStr = toIsoDateStr(dt);
+        }
+      }
+      if (reviewDateStr) {
+        reviewDateObj = new Date(reviewDateStr);
+      }
+
+      // 날짜가 없거나 유효하지 않으면 저장/필터링 불가 → 스킵
+      if (!reviewDateStr || !reviewDateObj || Number.isNaN(reviewDateObj.getTime())) {
+        filteredCount++;
+        continue;
+      }
+
       // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
-      if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate < filterDate) {
+      if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDateObj < filterDate) {
         filteredCount++;
         continue;
       }
@@ -5053,7 +5089,7 @@ class ScraperService {
       const saved = await this.saveReview({
         portalUrl: portalName,
         companyName,
-        reviewDate: reviewDate,
+        reviewDate: reviewDateStr,
         content: contentText, // 빈 문자열 허용
         rating: ratingValue || null,
         nickname: review.nickname,
