@@ -176,15 +176,22 @@ export default function Home() {
     } catch (error) {
       console.error('[API] 네트워크 에러:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-      setMessage(`작업 시작 실패: ${errorMessage}`);
       
       // API URL 확인 메시지 추가
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
         if (API_URL === 'http://localhost:3000') {
           setMessage(`작업 시작 실패: Vercel 환경 변수 NEXT_PUBLIC_API_URL이 설정되지 않았습니다. Railway 서버 URL을 설정하세요.`);
         } else {
-          setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. API URL을 확인하세요: ${API_URL}`);
+          const fullUrl = `${API_URL}/api/admin/jobs/start`;
+          setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. 
+          
+확인 사항:
+1. Railway 서버가 실행 중인지 확인: ${API_URL}/health
+2. API URL 확인: ${fullUrl}
+3. 브라우저 콘솔(F12)에서 자세한 에러 확인`);
         }
+      } else {
+        setMessage(`작업 시작 실패: ${errorMessage}`);
       }
     } finally {
       setLoading(false);
