@@ -6,6 +6,16 @@ import styles from './page.module.css';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'admin123';
 
+// 환경 변수 확인 및 경고
+if (typeof window !== 'undefined') {
+  if (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL === 'http://localhost:3000') {
+    console.warn('⚠️ NEXT_PUBLIC_API_URL이 설정되지 않았습니다. Vercel 환경 변수를 확인하세요.');
+  }
+  if (!process.env.NEXT_PUBLIC_ADMIN_SECRET || process.env.NEXT_PUBLIC_ADMIN_SECRET === 'admin123') {
+    console.warn('⚠️ NEXT_PUBLIC_ADMIN_SECRET이 설정되지 않았습니다. Vercel 환경 변수를 확인하세요.');
+  }
+}
+
 interface Job {
   id: number;
   status: string;
@@ -170,7 +180,11 @@ export default function Home() {
       
       // API URL 확인 메시지 추가
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-        setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. API URL을 확인하세요: ${API_URL}`);
+        if (API_URL === 'http://localhost:3000') {
+          setMessage(`작업 시작 실패: Vercel 환경 변수 NEXT_PUBLIC_API_URL이 설정되지 않았습니다. Railway 서버 URL을 설정하세요.`);
+        } else {
+          setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. API URL을 확인하세요: ${API_URL}`);
+        }
       }
     } finally {
       setLoading(false);
