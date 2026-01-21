@@ -181,11 +181,15 @@ class JobService {
     let errorCount = 0;
 
     try {
+      console.log(`[작업 시작] 스크래핑 작업 시작 - jobId: ${job.id}, dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}`);
+      
       await this.updateJobStatus(job.id, 'running', {
         startedAt: new Date(),
       });
 
+      console.log(`[작업 시작] 브라우저 초기화 시작...`);
       await scraper.init();
+      console.log(`[작업 시작] 브라우저 초기화 완료`);
 
       // companies 테이블에서 기업 목록 조회
       let companies;
