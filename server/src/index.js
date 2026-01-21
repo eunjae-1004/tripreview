@@ -33,20 +33,16 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  if (!serverReady) {
-    return res.status(503).json({ 
-      status: 'starting', 
-      message: 'Server is starting up',
-      timestamp: new Date().toISOString()
-    });
-  }
-  
+  // Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
+  // Express 서버가 시작되면 이미 요청을 처리할 수 있으므로 항상 200 반환
   res.status(200).json({ 
-    status: 'ok', 
-    message: 'Trip Review Server is running',
+    status: serverReady ? 'ok' : 'starting',
+    message: serverReady ? 'Trip Review Server is running' : 'Server is starting up',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    port: PORT
+    ...(serverReady && {
+      uptime: process.uptime(),
+      port: PORT
+    })
   });
 });
 
