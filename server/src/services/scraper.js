@@ -4972,7 +4972,9 @@ class ScraperService {
     }
     
     let savedCount = 0;
-    let filteredCount = 0;
+    let filteredCount = 0; // 날짜 필터링으로 제외된 개수
+    let skippedNoDate = 0; // 날짜 파싱 실패로 스킵된 개수
+    let duplicateCount = 0; // 중복으로 스킵된 개수
     let emptyContentCount = 0;
     
     console.log(`총 ${reviews.length}개 리뷰 추출됨`);
@@ -5030,7 +5032,10 @@ class ScraperService {
 
       // 날짜가 없거나 유효하지 않으면 저장/필터링 불가 → 스킵
       if (!reviewDateStr || !reviewDateObj || Number.isNaN(reviewDateObj.getTime())) {
-        filteredCount++;
+        skippedNoDate++;
+        if (skippedNoDate <= 3) {
+          console.log(`⚠️ 날짜 파싱 실패로 스킵: nickname="${review.nickname}", rawDate="${rawDate}"`);
+        }
         continue;
       }
 
@@ -5107,30 +5112,34 @@ class ScraperService {
 
       if (saved) {
         savedCount++;
-        console.log(`✅ 리뷰 저장 성공: ${review.nickname} (${portalName})`);
+        // 저장 성공 로그는 처음 5개만 출력 (너무 많으면 로그가 길어짐)
+        if (savedCount <= 5) {
+          console.log(`✅ 리뷰 저장 성공: ${review.nickname} (${portalName})`);
+        }
       } else {
         // 중복이거나 저장 실패
-        if (portalName === '야놀자') {
-          console.log(`⚠️ 리뷰 저장 실패 또는 중복: ${review.nickname} (${portalName})`);
-          console.log(`   - companyName: "${companyName}"`);
-          console.log(`   - reviewDate: ${reviewDate}`);
-          console.log(`   - nickname: "${review.nickname}"`);
-          console.log(`   - portalUrl: "${portalName}"`);
-        } else {
+        duplicateCount++;
+        // 중복 로그는 처음 3개만 출력
+        if (duplicateCount <= 3) {
           console.log(`⚠️ 리뷰 저장 실패 또는 중복: ${review.nickname} (${portalName}) - ${review.content?.substring(0, 50)}`);
         }
       }
     }
     
-    if (emptyContentCount > 0) {
-      console.log(`Content가 비어있는 리뷰: ${emptyContentCount}개 건너뜀`);
-    }
-    
+    // 상세 통계 출력
+    const totalSkipped = emptyContentCount + skippedNoDate + filteredCount + duplicateCount;
+    console.log(`\n📊 저장 통계:`);
+    console.log(`  - 총 추출: ${reviews.length}개`);
+    console.log(`  - 저장 성공: ${savedCount}개`);
+    console.log(`  - 중복으로 스킵: ${duplicateCount}개`);
+    console.log(`  - 날짜 파싱 실패로 스킵: ${skippedNoDate}개`);
     if (filteredCount > 0) {
-      console.log(`날짜 필터링: ${filteredCount}개 리뷰 제외 (일주일 이전)`);
+      console.log(`  - 날짜 필터링으로 제외: ${filteredCount}개 (${dateFilter === 'week' ? '일주일' : '2주일'} 이전)`);
     }
-    
-    console.log(`저장 시도: ${reviews.length - emptyContentCount - filteredCount}개, 저장 성공: ${savedCount}개`);
+    if (emptyContentCount > 0) {
+      console.log(`  - 빈 데이터로 스킵: ${emptyContentCount}개`);
+    }
+    console.log(`  - 저장 시도: ${reviews.length - emptyContentCount - skippedNoDate - filteredCount}개`);
 
     // scraping_jobs 테이블에 데이터 저장 (jobId가 있는 경우)
     if (jobId) {
