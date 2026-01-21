@@ -1037,13 +1037,16 @@ class ScraperService {
 
               const parseNaverRelativeOrPartialDate = (raw) => {
                 if (!raw) return null;
-                const t = String(raw).trim();
+                let t = String(raw).trim();
                 if (!t) return null;
+
+                // "방문일", "작성일" 같은 접두사 제거
+                t = t.replace(/^(방문일|작성일|리뷰일)\s*:?\s*/i, '').trim();
 
                 const now = new Date();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-                // 상대 표현: 오늘/어제
+                // 상대 표현: 오늘/어제 (공백 무시)
                 if (t.includes('오늘')) {
                   return { dateStr: today.toISOString().split('T')[0], dateObj: today };
                 }
@@ -1053,7 +1056,7 @@ class ScraperService {
                   return { dateStr: d.toISOString().split('T')[0], dateObj: d };
                 }
 
-                // 상대 표현: N일 전 / N주 전 / N개월 전
+                // 상대 표현: N일 전 / N주 전 / N개월 전 (공백 허용)
                 const relMatch = t.match(/(\d+)\s*(일|주|개월)\s*전/);
                 if (relMatch) {
                   const n = parseInt(relMatch[1], 10);
@@ -1066,7 +1069,7 @@ class ScraperService {
                 }
 
                 // "MM.DD." 또는 "M.D." 형태(연도 없음) → 올해로 가정
-                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})\./);
+                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})\.?/);
                 if (mdMatch) {
                   const month = mdMatch[1].padStart(2, '0');
                   const day = mdMatch[2].padStart(2, '0');
@@ -1082,31 +1085,88 @@ class ScraperService {
                   return { dateStr, dateObj: d };
                 }
 
+                // "YYYY.MM.DD" 또는 "YY.MM.DD" 형태
+                const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                if (ymdMatch) {
+                  let year = ymdMatch[1];
+                  if (year.length === 2) {
+                    year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+                  }
+                  const month = ymdMatch[2].padStart(2, '0');
+                  const day = ymdMatch[3].padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
+                  const d = new Date(dateStr);
+                  if (!Number.isNaN(d.getTime())) {
+                    return { dateStr, dateObj: d };
+                  }
+                }
+
+                // "YYYY-MM-DD" 또는 "YY-MM-DD" 형태
+                const ymdDashMatch = t.match(/(\d{4}|\d{2})-(\d{1,2})-(\d{1,2})/);
+                if (ymdDashMatch) {
+                  let year = ymdDashMatch[1];
+                  if (year.length === 2) {
+                    year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+                  }
+                  const month = ymdDashMatch[2].padStart(2, '0');
+                  const day = ymdDashMatch[3].padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
+                  const d = new Date(dateStr);
+                  if (!Number.isNaN(d.getTime())) {
+                    return { dateStr, dateObj: d };
+                  }
+                }
+
+                // "YYYY/MM/DD" 또는 "YY/MM/DD" 형태
+                const ymdSlashMatch = t.match(/(\d{4}|\d{2})\/(\d{1,2})\/(\d{1,2})/);
+                if (ymdSlashMatch) {
+                  let year = ymdSlashMatch[1];
+                  if (year.length === 2) {
+                    year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+                  }
+                  const month = ymdSlashMatch[2].padStart(2, '0');
+                  const day = ymdSlashMatch[3].padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
+                  const d = new Date(dateStr);
+                  if (!Number.isNaN(d.getTime())) {
+                    return { dateStr, dateObj: d };
+                  }
+                }
+
                 return null;
               };
               
               try {
-                // 1) 우선순위: `.pui__gfuUIT time`
-                // 2) fallback: 컨테이너 내 `time`
-                // 3) fallback: `.pui__gfuUIT` 텍스트
-                const candidates = [
+                // 날짜 추출을 위한 다양한 선택자 시도
+                const dateSelectors = [
                   container.locator('.pui__gfuUIT time').first(),
                   container.locator('time').first(),
+                  container.locator('[datetime]').first(),
+                  container.locator('.pui__gfuUIT').first(),
                 ];
 
-                for (const candidate of candidates) {
+                for (const selector of dateSelectors) {
                   if (date) break;
-                  const cnt = await candidate.count().catch(() => 0);
+                  const cnt = await selector.count().catch(() => 0);
                   if (!cnt) continue;
 
-                  const datetime = await candidate.getAttribute('datetime').catch(() => '');
+                  // 1) datetime 속성에서 추출 (가장 정확)
+                  const datetime = await selector.getAttribute('datetime').catch(() => '');
                   if (datetime) {
-                    date = datetime.split('T')[0];
-                    reviewDate = new Date(datetime);
-                    break;
+                    try {
+                      const d = new Date(datetime);
+                      if (!Number.isNaN(d.getTime())) {
+                        date = d.toISOString().split('T')[0];
+                        reviewDate = d;
+                        break;
+                      }
+                    } catch (e) {
+                      // datetime 파싱 실패, 다음 방법 시도
+                    }
                   }
 
-                  const dateText = await candidate.textContent().catch(() => '');
+                  // 2) 텍스트에서 상대/부분 날짜 파싱
+                  const dateText = await selector.textContent().catch(() => '');
                   if (dateText) {
                     const rel = parseNaverRelativeOrPartialDate(dateText);
                     if (rel) {
@@ -1115,10 +1175,14 @@ class ScraperService {
                       break;
                     }
 
+                    // 3) 정규식 패턴으로 날짜 추출
                     const datePatterns = [
-                      /(\d{2})\.(\d{1,2})\.(\d{1,2})\./,
-                      /(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/,
-                      /(\d{2})\.(\d{1,2})\.(\d{1,2})/,
+                      /(\d{4})\.(\d{1,2})\.(\d{1,2})\.?/,  // YYYY.MM.DD
+                      /(\d{2})\.(\d{1,2})\.(\d{1,2})\.?/,  // YY.MM.DD
+                      /(\d{4})-(\d{1,2})-(\d{1,2})/,       // YYYY-MM-DD
+                      /(\d{2})-(\d{1,2})-(\d{1,2})/,       // YY-MM-DD
+                      /(\d{4})\/(\d{1,2})\/(\d{1,2})/,     // YYYY/MM/DD
+                      /(\d{2})\/(\d{1,2})\/(\d{1,2})/,     // YY/MM/DD
                     ];
 
                     for (const pattern of datePatterns) {
@@ -1127,33 +1191,38 @@ class ScraperService {
                       let year, month, day;
                       if (dateMatch[1].length === 4) {
                         year = dateMatch[1];
-                        month = dateMatch[2].padStart(2, '0');
-                        day = dateMatch[3].padStart(2, '0');
                       } else {
                         year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
-                        month = dateMatch[2].padStart(2, '0');
-                        day = dateMatch[3].padStart(2, '0');
                       }
-                      date = `${year}-${month}-${day}`;
-                      reviewDate = new Date(date);
-                      break;
+                      month = dateMatch[2].padStart(2, '0');
+                      day = dateMatch[3].padStart(2, '0');
+                      const dateStr = `${year}-${month}-${day}`;
+                      const d = new Date(dateStr);
+                      if (!Number.isNaN(d.getTime())) {
+                        date = dateStr;
+                        reviewDate = d;
+                        break;
+                      }
                     }
 
                     if (date) break;
                   }
                 }
 
-                // 마지막 fallback: `.pui__gfuUIT` 텍스트에서 상대/부분 날짜 파싱
+                // 마지막 fallback: 컨테이너 전체 텍스트에서 날짜 추출
                 if (!date) {
-                  const gfuText = await container.locator('.pui__gfuUIT').first().textContent().catch(() => '');
-                  const rel2 = parseNaverRelativeOrPartialDate(gfuText);
-                  if (rel2) {
-                    date = rel2.dateStr;
-                    reviewDate = rel2.dateObj;
+                  const containerText = await container.textContent().catch(() => '');
+                  if (containerText) {
+                    const rel2 = parseNaverRelativeOrPartialDate(containerText);
+                    if (rel2) {
+                      date = rel2.dateStr;
+                      reviewDate = rel2.dateObj;
+                    }
                   }
                 }
               } catch (e) {
-                // 날짜 찾기 실패
+                // 날짜 찾기 실패 (에러는 무시하고 계속 진행)
+                console.log(`[네이버맵] 날짜 추출 중 에러 (무시): ${e.message}`);
               }
               
               // 날짜가 없으면 "오늘 날짜로 저장"하지 말고 스킵 (오늘로 저장되면 데이터 신뢰도가 깨짐)
@@ -1164,9 +1233,18 @@ class ScraperService {
               if (skippedNoDate) {
                 // 날짜가 없으면 해당 리뷰는 건너뜀
                 naverNoDateSkipCount++;
-                if (naverNoDateSkipCount <= 3) {
+                if (naverNoDateSkipCount <= 5) {
+                  // 날짜 추출을 시도한 모든 텍스트를 로깅
+                  let debugText = '';
+                  try {
+                    const timeText = await container.locator('time').first().textContent().catch(() => '');
+                    const gfuText = await container.locator('.pui__gfuUIT').first().textContent().catch(() => '');
+                    debugText = `time="${timeText}", .pui__gfuUIT="${gfuText}"`;
+                  } catch (e) {
+                    debugText = `(텍스트 추출 실패)`;
+                  }
                   console.log(
-                    `⚠️ [네이버맵] 날짜 파싱 실패로 리뷰 스킵 (샘플 ${naverNoDateSkipCount}/3): nickname="${nickname}", text="${(allText || '').trim().slice(0, 80)}..."`
+                    `⚠️ [네이버맵] 날짜 파싱 실패로 리뷰 스킵 (샘플 ${naverNoDateSkipCount}/5): nickname="${nickname}", ${debugText}`
                   );
                 }
                 continue;
