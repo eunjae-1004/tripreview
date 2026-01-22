@@ -1111,12 +1111,14 @@ class ScraperService {
                 }
 
                 // "YYYY.MM.DD" 또는 "YY.MM.DD" 형태
+                // "YYYY.MM" 또는 "YY.MM" 형태(일자 없음) → 1일로 가정
                 // 주의: "25.12.15"는 "2025-12-15"를 의미 (25 = 2025년)
-                const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})(?:\.(\d{1,2}))?\.?/);
                 if (ymdMatch) {
                   let year = ymdMatch[1];
                   let month = ymdMatch[2].padStart(2, '0');
-                  let day = ymdMatch[3].padStart(2, '0');
+                  // 일자가 없으면 1일로 기본값 설정
+                  let day = ymdMatch[3] ? ymdMatch[3].padStart(2, '0') : '01';
                   
                   // 2자리 연도 처리: "25" → "2025"
                   if (year.length === 2) {
