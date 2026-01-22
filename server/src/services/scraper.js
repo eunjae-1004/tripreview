@@ -1790,9 +1790,10 @@ class ScraperService {
    * @param {string} companyName - 기업명 (검색어로 사용)
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
-  async scrapeKakaoMap(companyName, dateFilter = 'week') {
+  async scrapeKakaoMap(companyName, dateFilter = 'week', jobId = null, portalType = 'kakao', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`카카오맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
+      console.log(`카카오맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // 카카오맵 메인 페이지로 이동
       await this.page.goto('https://map.kakao.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -2145,7 +2146,7 @@ class ScraperService {
             
             // 리뷰 데이터가 유효한지 확인
             if (content.trim().length > 10 || rating > 0 || nickname !== `사용자${i + 1}`) {
-              reviews.push({
+              const reviewData = {
                 content: content.trim() || '',
                 rating,
                 nickname: nickname.trim(),
@@ -2155,7 +2156,69 @@ class ScraperService {
                 visitType: visitType,
                 emotion: null, // 카카오맵도 emotion을 visit_keyword에 저장하므로 null
                 revisitFlag,
-              });
+              };
+              
+              // 즉시 저장 방식이 활성화된 경우 즉시 저장
+              if (saveImmediately && companyName && date) {
+                try {
+                  // 날짜 필터링 확인
+                  let shouldSave = true;
+                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
+                    const today = new Date();
+                    const filterDate = new Date(today);
+                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                    if (reviewDate < filterDate) {
+                      shouldSave = false;
+                    }
+                  }
+                  
+                  if (shouldSave) {
+                    const analysis = this.analyzeText(
+                      reviewData.content,
+                      rating,
+                      reviewData.visitKeyword,
+                      reviewData.reviewKeyword
+                    );
+                    
+                    const saved = await this.saveReview({
+                      portalUrl: '카카오맵',
+                      companyName,
+                      reviewDate: date,
+                      content: reviewData.content,
+                      rating: rating || null,
+                      nickname: reviewData.nickname,
+                      visitKeyword: reviewData.visitKeyword || null,
+                      reviewKeyword: reviewData.reviewKeyword || null,
+                      visitType: reviewData.visitType || null,
+                      emotion: reviewData.emotion || null,
+                      revisitFlag: reviewData.revisitFlag || false,
+                      nRating: analysis.nRating,
+                      nEmotion: analysis.nEmotion,
+                      nCharCount: analysis.nCharCount,
+                      title: null,
+                      additionalInfo: null,
+                    });
+                    
+                    if (saved) {
+                      actualSavedCount++;
+                      reviews.push(reviewData);
+                      if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                        console.log(`✅ [카카오맵 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
+                      }
+                    } else {
+                      reviews.push(reviewData);
+                    }
+                  } else {
+                    reviews.push(reviewData);
+                  }
+                } catch (saveError) {
+                  console.error(`[카카오맵] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+                  reviews.push(reviewData);
+                }
+              } else {
+                // 기존 방식: 배열에 추가만 함
+                reviews.push(reviewData);
+              }
             }
           } catch (err) {
             console.error(`리뷰 ${i + 1} 추출 오류:`, err.message);
@@ -2163,6 +2226,10 @@ class ScraperService {
         }
         
         console.log(`카카오맵 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+        if (saveImmediately) {
+          console.log(`[카카오맵] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+          reviews._actualSavedCount = actualSavedCount;
+        }
       } catch (e) {
         console.log('리뷰 추출 실패:', e.message);
       }
@@ -2202,9 +2269,10 @@ class ScraperService {
    * @param {string} companyName - 기업명 (검색어로 사용)
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
-  async scrapeYanolja(companyName, dateFilter = 'week') {
+  async scrapeYanolja(companyName, dateFilter = 'week', jobId = null, portalType = 'yanolja', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`야놀자 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
+      console.log(`야놀자 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // 야놀자 검색 페이지로 이동
       const searchUrl = `https://nol.yanolja.com/results?keyword=${encodeURIComponent(companyName)}`;
@@ -2776,7 +2844,7 @@ class ScraperService {
             
             // 리뷰 데이터가 유효한지 확인 (content가 없어도 nickname이나 visitType이 있으면 저장)
             if (content.trim().length > 10 || rating > 0 || (nickname !== `사용자${i + 1}` && nickname.trim().length > 0)) {
-              reviews.push({
+              const reviewData = {
                 content: content.trim() || '',
                 rating,
                 nickname: nickname.trim(),
@@ -2786,7 +2854,69 @@ class ScraperService {
                 visitType: visitType,
                 emotion: null,
                 revisitFlag,
-              });
+              };
+              
+              // 즉시 저장 방식이 활성화된 경우 즉시 저장
+              if (saveImmediately && companyName && date) {
+                try {
+                  // 날짜 필터링 확인
+                  let shouldSave = true;
+                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
+                    const today = new Date();
+                    const filterDate = new Date(today);
+                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                    if (reviewDate < filterDate) {
+                      shouldSave = false;
+                    }
+                  }
+                  
+                  if (shouldSave) {
+                    const analysis = this.analyzeText(
+                      reviewData.content,
+                      rating,
+                      reviewData.visitKeyword,
+                      reviewData.reviewKeyword
+                    );
+                    
+                    const saved = await this.saveReview({
+                      portalUrl: '야놀자',
+                      companyName,
+                      reviewDate: date,
+                      content: reviewData.content,
+                      rating: rating || null,
+                      nickname: reviewData.nickname,
+                      visitKeyword: reviewData.visitKeyword || null,
+                      reviewKeyword: reviewData.reviewKeyword || null,
+                      visitType: reviewData.visitType || null,
+                      emotion: reviewData.emotion || null,
+                      revisitFlag: reviewData.revisitFlag || false,
+                      nRating: analysis.nRating,
+                      nEmotion: analysis.nEmotion,
+                      nCharCount: analysis.nCharCount,
+                      title: null,
+                      additionalInfo: null,
+                    });
+                    
+                    if (saved) {
+                      actualSavedCount++;
+                      reviews.push(reviewData);
+                      if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                        console.log(`✅ [야놀자 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
+                      }
+                    } else {
+                      reviews.push(reviewData);
+                    }
+                  } else {
+                    reviews.push(reviewData);
+                  }
+                } catch (saveError) {
+                  console.error(`[야놀자] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+                  reviews.push(reviewData);
+                }
+              } else {
+                // 기존 방식: 배열에 추가만 함
+                reviews.push(reviewData);
+              }
             } else if (i < 3) {
               // 처음 3개 리뷰에서 유효하지 않은 경우 로그
               console.log(`리뷰 ${i + 1} 유효하지 않음: content=${content.length}, rating=${rating}, nickname="${nickname}"`);
@@ -2798,6 +2928,10 @@ class ScraperService {
         }
         
         console.log(`야놀자 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+        if (saveImmediately) {
+          console.log(`[야놀자] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+          reviews._actualSavedCount = actualSavedCount;
+        }
       } catch (e) {
         console.log('리뷰 추출 실패:', e.message);
       }
@@ -2828,9 +2962,10 @@ class ScraperService {
    * @param {string} companyName - 기업명 (검색어로 사용)
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
-  async scrapeGoogle(companyName, dateFilter = 'week') {
+  async scrapeGoogle(companyName, dateFilter = 'week', jobId = null, portalType = 'google', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
+      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // 구글 여행 검색 페이지로 이동
       const searchUrl = `https://www.google.com/travel/search?q=${encodeURIComponent(companyName)}`;
@@ -3508,7 +3643,7 @@ class ScraperService {
           
           // 리뷰 데이터가 유효한지 확인
           if (content.trim().length > 10 || rating > 0 || (nickname && nickname.trim().length > 0)) {
-            reviews.push({
+            const reviewData = {
               content: content.trim() || '',
               nickname: nickname || `사용자${i + 1}`,
               rating: rating,
@@ -3518,7 +3653,69 @@ class ScraperService {
               visitKeyword: visitKeyword || '',
               reviewDate: date,
               revisitFlag: false,
-            });
+            };
+            
+            // 즉시 저장 방식이 활성화된 경우 즉시 저장
+            if (saveImmediately && companyName && date) {
+              try {
+                // 날짜 필터링 확인
+                let shouldSave = true;
+                if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
+                  const today = new Date();
+                  const filterDate = new Date(today);
+                  filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                  if (reviewDate < filterDate) {
+                    shouldSave = false;
+                  }
+                }
+                
+                if (shouldSave) {
+                  const analysis = this.analyzeText(
+                    reviewData.content,
+                    rating,
+                    reviewData.visitKeyword,
+                    Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword
+                  );
+                  
+                  const saved = await this.saveReview({
+                    portalUrl: '구글',
+                    companyName,
+                    reviewDate: date,
+                    content: reviewData.content,
+                    rating: rating || null,
+                    nickname: reviewData.nickname,
+                    visitKeyword: reviewData.visitKeyword || null,
+                    reviewKeyword: Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword || null,
+                    visitType: reviewData.visitType || null,
+                    emotion: reviewData.emotion || null,
+                    revisitFlag: reviewData.revisitFlag || false,
+                    nRating: analysis.nRating,
+                    nEmotion: analysis.nEmotion,
+                    nCharCount: analysis.nCharCount,
+                    title: null,
+                    additionalInfo: null,
+                  });
+                  
+                  if (saved) {
+                    actualSavedCount++;
+                    reviews.push(reviewData);
+                    if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                      console.log(`✅ [구글 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
+                    }
+                  } else {
+                    reviews.push(reviewData);
+                  }
+                } else {
+                  reviews.push(reviewData);
+                }
+              } catch (saveError) {
+                console.error(`[구글] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+                reviews.push(reviewData);
+              }
+            } else {
+              // 기존 방식: 배열에 추가만 함
+              reviews.push(reviewData);
+            }
           }
         } catch (error) {
           console.log(`리뷰 ${i + 1} 추출 실패:`, error.message);
@@ -3526,6 +3723,10 @@ class ScraperService {
       }
       
       console.log(`구글 여행 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      if (saveImmediately) {
+        console.log(`[구글] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+        reviews._actualSavedCount = actualSavedCount;
+      }
       return reviews;
       
     } catch (error) {
@@ -3548,9 +3749,10 @@ class ScraperService {
    * @param {string} dateFilter - 날짜 필터 ('all', 'week', '2weeks')
    * @param {string} agodaUrl - 아고다 URL (companies 테이블의 agoda_url)
    */
-  async scrapeAgoda(companyName, dateFilter = 'all', agodaUrl = null) {
+  async scrapeAgoda(companyName, dateFilter = 'all', agodaUrl = null, jobId = null, portalType = 'agoda', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`아고다 스크래핑 시작: "${companyName}" 검색(필터: ${dateFilter})`);
+      console.log(`아고다 스크래핑 시작: "${companyName}" 검색(필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // agoda_url이 있으면 직접 URL로 이동
       if (agodaUrl) {
@@ -4517,7 +4719,7 @@ class ScraperService {
             
             // 리뷰 데이터 추가
             if ((content && content.trim().length > 0) || rating > 0 || (nickname && nickname.trim().length > 0)) {
-              reviews.push({
+              const reviewData = {
                 content: content ? content.trim() : '',
                 nickname: nickname || `사용자${i + 1}`,
                 rating: rating,
@@ -4529,7 +4731,69 @@ class ScraperService {
                 title: title || null,
                 additionalInfo: null, // 추가 정보는 필요시 확장
                 revisitFlag: false,
-              });
+              };
+              
+              // 즉시 저장 방식이 활성화된 경우 즉시 저장
+              if (saveImmediately && companyName && date) {
+                try {
+                  // 날짜 필터링 확인
+                  let shouldSave = true;
+                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
+                    const today = new Date();
+                    const filterDate = new Date(today);
+                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                    if (reviewDate < filterDate) {
+                      shouldSave = false;
+                    }
+                  }
+                  
+                  if (shouldSave) {
+                    const analysis = this.analyzeText(
+                      reviewData.content,
+                      rating,
+                      reviewData.visitKeyword,
+                      Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword
+                    );
+                    
+                    const saved = await this.saveReview({
+                      portalUrl: '아고다',
+                      companyName,
+                      reviewDate: date,
+                      content: reviewData.content,
+                      rating: rating || null,
+                      nickname: reviewData.nickname,
+                      visitKeyword: reviewData.visitKeyword || null,
+                      reviewKeyword: Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword || null,
+                      visitType: reviewData.visitType || null,
+                      emotion: reviewData.emotion || null,
+                      revisitFlag: reviewData.revisitFlag || false,
+                      nRating: analysis.nRating,
+                      nEmotion: analysis.nEmotion,
+                      nCharCount: analysis.nCharCount,
+                      title: reviewData.title || null,
+                      additionalInfo: reviewData.additionalInfo || null,
+                    });
+                    
+                    if (saved) {
+                      actualSavedCount++;
+                      reviews.push(reviewData);
+                      if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                        console.log(`✅ [아고다 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
+                      }
+                    } else {
+                      reviews.push(reviewData);
+                    }
+                  } else {
+                    reviews.push(reviewData);
+                  }
+                } catch (saveError) {
+                  console.error(`[아고다] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+                  reviews.push(reviewData);
+                }
+              } else {
+                // 기존 방식: 배열에 추가만 함
+                reviews.push(reviewData);
+              }
             }
           } catch (error) {
             // 리뷰 추출 실패 시 건너뛰기
@@ -4599,6 +4863,10 @@ class ScraperService {
       }
       
       console.log(`아고다 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      if (saveImmediately) {
+        console.log(`[아고다] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+        reviews._actualSavedCount = actualSavedCount;
+      }
       return reviews;
       
     } catch (error) {
@@ -4645,9 +4913,10 @@ class ScraperService {
    * @param {string} companyName - 기업명 (검색어로 사용)
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
-  async scrapeGoogle(companyName, dateFilter = 'week') {
+  async scrapeGoogle(companyName, dateFilter = 'week', jobId = null, portalType = 'google', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
+      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // 구글 여행 검색 페이지로 이동
       const searchUrl = `https://www.google.com/travel/search?q=${encodeURIComponent(companyName)}`;
@@ -5300,6 +5569,10 @@ class ScraperService {
       }
       
       console.log(`구글 여행 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      if (saveImmediately) {
+        console.log(`[구글] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+        reviews._actualSavedCount = actualSavedCount;
+      }
       return reviews;
       
     } catch (error) {
@@ -5320,16 +5593,17 @@ class ScraperService {
     let reviews = [];
 
     // portalType이 명시적으로 지정된 경우 우선 처리
+    // 모든 포털에 즉시 저장 방식 적용 (메모리 효율성)
     if (portalType === 'yanolja') {
-      reviews = await this.scrapeYanolja(companyName, dateFilter);
+      reviews = await this.scrapeYanolja(companyName, dateFilter, jobId, 'yanolja', true);
     } else if (portalType === 'kakao') {
-      reviews = await this.scrapeKakaoMap(companyName, dateFilter);
+      reviews = await this.scrapeKakaoMap(companyName, dateFilter, jobId, 'kakao', true);
     } else if (portalType === 'google') {
-      reviews = await this.scrapeGoogle(companyName, dateFilter);
+      reviews = await this.scrapeGoogle(companyName, dateFilter, jobId, 'google', true);
     } else if (portalType === 'agoda') {
       // portalUrl이 있으면 agodaUrl로 사용, 없으면 null
       const agodaUrl = portalUrl && portalUrl.includes('agoda.com') ? portalUrl : null;
-      reviews = await this.scrapeAgoda(companyName, dateFilter, agodaUrl);
+      reviews = await this.scrapeAgoda(companyName, dateFilter, agodaUrl, jobId, 'agoda', true);
     } else if (portalType === 'naver') {
       // 네이버맵은 companyName으로 검색하여 스크래핑
       // 즉시 저장 방식으로 변경 (메모리 효율성)
@@ -5340,18 +5614,18 @@ class ScraperService {
       reviews = await this.scrapeNaverMap(companyName, dateFilter, jobId, 'naver', true);
     } else if (!portalUrl || portalUrl.includes('kakao.com')) {
       // 카카오맵은 URL이 없어도 companyName으로 검색하여 스크래핑
-      reviews = await this.scrapeKakaoMap(companyName, dateFilter);
+      reviews = await this.scrapeKakaoMap(companyName, dateFilter, jobId, 'kakao', true);
     } else if (portalUrl && portalUrl.includes('yanolja.com')) {
       // 야놀자 URL이 제공된 경우
-      reviews = await this.scrapeYanolja(companyName, dateFilter);
+      reviews = await this.scrapeYanolja(companyName, dateFilter, jobId, 'yanolja', true);
     } else if (portalUrl && portalUrl.includes('google.com')) {
-      reviews = await this.scrapeGoogle(companyName, dateFilter);
+      reviews = await this.scrapeGoogle(companyName, dateFilter, jobId, 'google', true);
     } else if (portalUrl && portalUrl.includes('goodchoice.kr')) {
       reviews = await this.scrapeGoodchoice(portalUrl);
     } else if (portalUrl && portalUrl.includes('tripadvisor.co.kr')) {
       reviews = await this.scrapeTripadvisor(portalUrl);
     } else if (portalUrl && portalUrl.includes('agoda.com')) {
-      reviews = await this.scrapeAgoda(companyName, dateFilter, portalUrl);
+      reviews = await this.scrapeAgoda(companyName, dateFilter, portalUrl, jobId, 'agoda', true);
     }
 
     // 수집한 리뷰 데이터를 DB 형식에 맞게 변환
@@ -5380,12 +5654,18 @@ class ScraperService {
       return 0;
     }
     
-    // 네이버맵의 경우 즉시 저장 방식으로 이미 저장되었으므로, 여기서는 통계만 업데이트
-    if (portalType === 'naver' || (portalUrl && portalUrl.includes('naver.com'))) {
-      console.log(`[저장] 네이버맵은 즉시 저장 방식으로 이미 저장되었습니다. 통계만 업데이트합니다.`);
-      // scrapeNaverMap()에서 실제 저장 개수를 _actualSavedCount로 저장했음
+    // 모든 포털이 즉시 저장 방식으로 이미 저장되었으므로, 여기서는 통계만 업데이트
+    if (portalType === 'naver' || portalType === 'kakao' || portalType === 'yanolja' || portalType === 'google' || portalType === 'agoda' ||
+        (portalUrl && (portalUrl.includes('naver.com') || portalUrl.includes('kakao.com') || portalUrl.includes('yanolja.com') || portalUrl.includes('google.com') || portalUrl.includes('agoda.com')))) {
+      const portalName = portalType === 'naver' ? '네이버맵' : 
+                         portalType === 'kakao' ? '카카오맵' :
+                         portalType === 'yanolja' ? '야놀자' :
+                         portalType === 'google' ? '구글' :
+                         portalType === 'agoda' ? '아고다' : '알 수 없음';
+      console.log(`[저장] ${portalName}은 즉시 저장 방식으로 이미 저장되었습니다. 통계만 업데이트합니다.`);
+      // 각 스크래퍼에서 실제 저장 개수를 _actualSavedCount로 저장했음
       const actualSavedCount = reviews._actualSavedCount !== undefined ? reviews._actualSavedCount : reviews.length;
-      console.log(`[저장] 네이버맵 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+      console.log(`[저장] ${portalName} 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
       return actualSavedCount;
     }
     
