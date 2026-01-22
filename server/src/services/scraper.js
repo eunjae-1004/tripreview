@@ -5176,7 +5176,14 @@ class ScraperService {
     let duplicateCount = 0; // 중복으로 스킵된 개수
     let emptyContentCount = 0;
     
-    console.log(`총 ${reviews.length}개 리뷰 추출됨`);
+    console.log(`\n[저장 시작] 총 ${reviews.length}개 리뷰 추출됨 (기업: "${companyName}", 포털: ${portalType || portalUrl || '알 수 없음'})`);
+    
+    if (reviews.length === 0) {
+      console.log(`⚠️ [저장] 추출된 리뷰가 없습니다. 스크래핑이 완료되지 않았거나 리뷰를 찾지 못했을 수 있습니다.`);
+      return 0;
+    }
+    
+    console.log(`[저장] 리뷰 저장 루프 시작 (${reviews.length}개 처리 예정)...`);
     
     for (const review of reviews) {
       const contentText = (review.content || '').trim();
@@ -5232,8 +5239,8 @@ class ScraperService {
       // 날짜가 없거나 유효하지 않으면 저장/필터링 불가 → 스킵
       if (!reviewDateStr || !reviewDateObj || Number.isNaN(reviewDateObj.getTime())) {
         skippedNoDate++;
-        if (skippedNoDate <= 3) {
-          console.log(`⚠️ 날짜 파싱 실패로 스킵: nickname="${review.nickname}", rawDate="${rawDate}"`);
+        if (skippedNoDate <= 10) {
+          console.log(`⚠️ [저장] 날짜 파싱 실패로 스킵 (${skippedNoDate}번째): nickname="${review.nickname}", rawDate="${rawDate}"`);
         }
         continue;
       }
@@ -5241,6 +5248,9 @@ class ScraperService {
       // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
       if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDateObj < filterDate) {
         filteredCount++;
+        if (filteredCount <= 10) {
+          console.log(`⚠️ [저장] 날짜 필터링으로 제외 (${filteredCount}번째): nickname="${review.nickname}", date="${reviewDateStr}" (필터 기준: ${filterDate.toISOString().split('T')[0]} 이후)`);
+        }
         continue;
       }
       
@@ -5311,16 +5321,18 @@ class ScraperService {
 
       if (saved) {
         savedCount++;
-        // 저장 성공 로그는 처음 5개만 출력 (너무 많으면 로그가 길어짐)
-        if (savedCount <= 5) {
-          console.log(`✅ 리뷰 저장 성공: ${review.nickname} (${portalName})`);
+        // 저장 성공 로그는 처음 10개만 출력
+        if (savedCount <= 10) {
+          console.log(`✅ [저장 성공] ${savedCount}번째: ${review.nickname} (${portalName}) - date: ${reviewDateStr}`);
+        } else if (savedCount % 10 === 0) {
+          console.log(`✅ [저장 진행] ${savedCount}개 저장 완료...`);
         }
       } else {
         // 중복이거나 저장 실패
         duplicateCount++;
-        // 중복 로그는 처음 3개만 출력
-        if (duplicateCount <= 3) {
-          console.log(`⚠️ 리뷰 저장 실패 또는 중복: ${review.nickname} (${portalName}) - ${review.content?.substring(0, 50)}`);
+        // 중복 로그는 처음 10개만 출력
+        if (duplicateCount <= 10) {
+          console.log(`⚠️ [저장 실패/중복] ${duplicateCount}번째: ${review.nickname} (${portalName}) - ${review.content?.substring(0, 50)}`);
         }
       }
     }
