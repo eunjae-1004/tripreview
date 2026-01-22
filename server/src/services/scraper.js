@@ -897,62 +897,63 @@ class ScraperService {
                 if (!t.match(/[월화수목금토일]/)) {
                   const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})(?:\.(\d{1,2}))?\.?/);
                   if (ymdMatch) {
-                  let year = ymdMatch[1];
-                  let month = ymdMatch[2].padStart(2, '0');
-                  // 일자가 없으면 1일로 기본값 설정
-                  let day = ymdMatch[3] ? ymdMatch[3].padStart(2, '0') : '01';
-                  
-                  // 2자리 연도 처리: "25" → "2025"
-                  if (year.length === 2) {
-                    const yearNum = parseInt(year, 10);
-                    // 0-50은 2000-2050, 51-99는 1951-1999로 해석
-                    year = yearNum < 50 ? `20${year}` : `19${year}`;
-                  }
-                  
-                  // 날짜 유효성 검증: 월은 1-12, 일은 1-31 범위
-                  const monthNum = parseInt(month, 10);
-                  const dayNum = parseInt(day, 10);
-                  
-                  // 만약 첫 번째 숫자가 4자리인데 월 범위를 벗어나면, 순서가 잘못된 것일 수 있음
-                  // 예: "2026.25.12" → 실제로는 "25.12.XX" 형식일 수 있음
-                  if (ymdMatch[1].length === 4 && (monthNum > 12 || dayNum > 31)) {
-                    // 순서가 잘못되었을 가능성: "2026.25.12" → "25.12.XX"로 재해석
-                    const altMatch = t.match(/(\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
-                    if (altMatch) {
-                      const altYear = altMatch[1];
-                      const altMonth = altMatch[2].padStart(2, '0');
-                      const altDay = altMatch[3].padStart(2, '0');
-                      const altYearNum = parseInt(altYear, 10);
-                      const altMonthNum = parseInt(altMonth, 10);
-                      const altDayNum = parseInt(altDay, 10);
-                      
-                      if (altMonthNum >= 1 && altMonthNum <= 12 && altDayNum >= 1 && altDayNum <= 31) {
-                        const finalYear = altYearNum < 50 ? `20${altYear}` : `19${altYear}`;
-                        const dateStr = `${finalYear}-${altMonth}-${altDay}`;
-                        const d = new Date(dateStr);
-                        if (!Number.isNaN(d.getTime()) && 
-                            d.getFullYear() == finalYear && 
-                            d.getMonth() + 1 == altMonthNum && 
-                            d.getDate() == altDayNum) {
-                          return { dateStr, dateObj: d };
+                    let year = ymdMatch[1];
+                    let month = ymdMatch[2].padStart(2, '0');
+                    // 일자가 없으면 1일로 기본값 설정
+                    let day = ymdMatch[3] ? ymdMatch[3].padStart(2, '0') : '01';
+                    
+                    // 2자리 연도 처리: "25" → "2025"
+                    if (year.length === 2) {
+                      const yearNum = parseInt(year, 10);
+                      // 0-50은 2000-2050, 51-99는 1951-1999로 해석
+                      year = yearNum < 50 ? `20${year}` : `19${year}`;
+                    }
+                    
+                    // 날짜 유효성 검증: 월은 1-12, 일은 1-31 범위
+                    const monthNum = parseInt(month, 10);
+                    const dayNum = parseInt(day, 10);
+                    
+                    // 만약 첫 번째 숫자가 4자리인데 월 범위를 벗어나면, 순서가 잘못된 것일 수 있음
+                    // 예: "2026.25.12" → 실제로는 "25.12.XX" 형식일 수 있음
+                    if (ymdMatch[1].length === 4 && (monthNum > 12 || dayNum > 31)) {
+                      // 순서가 잘못되었을 가능성: "2026.25.12" → "25.12.XX"로 재해석
+                      const altMatch = t.match(/(\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                      if (altMatch) {
+                        const altYear = altMatch[1];
+                        const altMonth = altMatch[2].padStart(2, '0');
+                        const altDay = altMatch[3].padStart(2, '0');
+                        const altYearNum = parseInt(altYear, 10);
+                        const altMonthNum = parseInt(altMonth, 10);
+                        const altDayNum = parseInt(altDay, 10);
+                        
+                        if (altMonthNum >= 1 && altMonthNum <= 12 && altDayNum >= 1 && altDayNum <= 31) {
+                          const finalYear = altYearNum < 50 ? `20${altYear}` : `19${altYear}`;
+                          const dateStr = `${finalYear}-${altMonth}-${altDay}`;
+                          const d = new Date(dateStr);
+                          if (!Number.isNaN(d.getTime()) && 
+                              d.getFullYear() == finalYear && 
+                              d.getMonth() + 1 == altMonthNum && 
+                              d.getDate() == altDayNum) {
+                            return { dateStr, dateObj: d };
+                          }
                         }
                       }
+                      return null; // 잘못된 날짜 형식
                     }
-                    return null; // 잘못된 날짜 형식
-                  }
-                  
-                  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
-                    return null; // 잘못된 날짜 형식
-                  }
-                  
-                  const dateStr = `${year}-${month}-${day}`;
-                  const d = new Date(dateStr);
-                  // Date 객체 유효성 검증
-                  if (!Number.isNaN(d.getTime()) && 
-                      d.getFullYear() == year && 
-                      d.getMonth() + 1 == monthNum && 
-                      d.getDate() == dayNum) {
-                    return { dateStr, dateObj: d };
+                    
+                    if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+                      return null; // 잘못된 날짜 형식
+                    }
+                    
+                    const dateStr = `${year}-${month}-${day}`;
+                    const d = new Date(dateStr);
+                    // Date 객체 유효성 검증
+                    if (!Number.isNaN(d.getTime()) && 
+                        d.getFullYear() == year && 
+                        d.getMonth() + 1 == monthNum && 
+                        d.getDate() == dayNum) {
+                      return { dateStr, dateObj: d };
+                    }
                   }
                 }
 
