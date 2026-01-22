@@ -392,7 +392,7 @@ class ScraperService {
    */
   async scrapeNaverMap(companyName, dateFilter = 'week', jobId = null, portalType = 'naver', saveImmediately = false) {
     try {
-      console.log(`네이버맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
+      console.log(`네이버맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
       // 네이버 검색 페이지로 이동
       const searchUrl = `https://search.naver.com/search.naver?&query=${encodeURIComponent(companyName)}`;
