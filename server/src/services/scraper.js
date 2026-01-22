@@ -1333,13 +1333,23 @@ class ScraperService {
                 console.log(`[네이버맵] 날짜 추출 중 에러 (무시): ${e.message}`);
               }
               
-              // 날짜가 없으면 "오늘 날짜로 저장"하지 말고 스킵 (오늘로 저장되면 데이터 신뢰도가 깨짐)
+              // 날짜가 없으면 오늘 날짜로 설정 (즉시 저장 방식에서는 저장하도록)
               if (!date) {
-                skippedNoDate = true;
+                if (saveImmediately) {
+                  // 즉시 저장 방식에서는 날짜가 없어도 저장 (오늘 날짜로)
+                  date = new Date().toISOString().split('T')[0];
+                  reviewDate = new Date();
+                  if (i < 5) {
+                    console.log(`[네이버맵] 날짜 없음 - 오늘 날짜로 저장: nickname="${nickname}"`);
+                  }
+                } else {
+                  // 기존 방식: 날짜가 없으면 스킵
+                  skippedNoDate = true;
+                }
               }
 
               if (skippedNoDate) {
-                // 날짜가 없으면 해당 리뷰는 건너뜀
+                // 날짜가 없으면 해당 리뷰는 건너뜀 (기존 방식)
                 naverNoDateSkipCount++;
                 if (naverNoDateSkipCount <= 5) {
                   // 날짜 추출을 시도한 모든 텍스트를 로깅
@@ -1590,7 +1600,17 @@ class ScraperService {
                 };
                 
                 // 즉시 저장 방식이 활성화된 경우 즉시 저장
-                if (saveImmediately && companyName && date) {
+                if (saveImmediately && companyName) {
+                  // date가 없어도 저장 시도 (날짜 파싱 실패한 경우도 저장)
+                  if (!date) {
+                    if (i < 5) {
+                      console.log(`[네이버맵] 즉시 저장 시도: date가 없지만 저장 시도 (리뷰 ${i + 1})`);
+                    }
+                    // date가 없으면 오늘 날짜로 저장
+                    date = new Date().toISOString().split('T')[0];
+                    reviewDate = new Date();
+                  }
+                  
                   try {
                     // 날짜 필터링 확인
                     let shouldSave = true;
@@ -1607,6 +1627,9 @@ class ScraperService {
                     }
                     
                     if (shouldSave) {
+                      if (i < 3) {
+                        console.log(`[네이버맵] 즉시 저장 시도: companyName="${companyName}", date="${date}", nickname="${reviewData.nickname}"`);
+                      }
                       const analysis = this.analyzeText(
                         reviewData.content,
                         rating,
@@ -1667,8 +1690,6 @@ class ScraperService {
                       console.log(`[네이버맵] 즉시 저장 비활성화 - 배열에만 추가 (리뷰 ${i + 1})`);
                     } else if (!companyName) {
                       console.log(`[네이버맵] 즉시 저장 스킵: companyName 없음 (리뷰 ${i + 1})`);
-                    } else if (!date) {
-                      console.log(`[네이버맵] 즉시 저장 스킵: date 없음 (리뷰 ${i + 1})`);
                     }
                   }
                   
@@ -2159,7 +2180,12 @@ class ScraperService {
               };
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
-              if (saveImmediately && companyName && date) {
+              if (saveImmediately && companyName) {
+                // date가 없어도 저장 시도
+                if (!date) {
+                  date = new Date().toISOString().split('T')[0];
+                  reviewDate = new Date();
+                }
                 try {
                   // 날짜 필터링 확인
                   let shouldSave = true;
@@ -2857,7 +2883,12 @@ class ScraperService {
               };
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
-              if (saveImmediately && companyName && date) {
+              if (saveImmediately && companyName) {
+                // date가 없어도 저장 시도
+                if (!date) {
+                  date = new Date().toISOString().split('T')[0];
+                  reviewDate = new Date();
+                }
                 try {
                   // 날짜 필터링 확인
                   let shouldSave = true;
@@ -4734,7 +4765,12 @@ class ScraperService {
               };
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
-              if (saveImmediately && companyName && date) {
+              if (saveImmediately && companyName) {
+                // date가 없어도 저장 시도
+                if (!date) {
+                  date = new Date().toISOString().split('T')[0];
+                  reviewDate = new Date();
+                }
                 try {
                   // 날짜 필터링 확인
                   let shouldSave = true;
