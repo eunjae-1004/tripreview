@@ -659,306 +659,42 @@ class ScraperService {
             console.log('날짜 필터: 전체 (필터링 없음)');
           }
           
-          // 리뷰 더보기 버튼 클릭 (계속 클릭하여 모든 리뷰 로드)
-          // 더보기 버튼이 사라질 때까지 계속 클릭
-          let moreButtonExists = true;
-          let clickCount = 0;
-          const maxClicks = 100; // 최대 100페이지까지 로드 (실제로는 버튼이 사라질 때까지)
-          let lastReviewCount = 0;
-          let noChangeCount = 0; // 리뷰 개수가 변하지 않은 연속 횟수
-          
-          console.log('더보기 버튼 클릭 시작 (모든 리뷰 로드)...');
-          
-          // 초기 리뷰 개수 확인
-          const initialReviewButtons = frame.locator('ul#_review_list > li.place_apply_pui');
-          lastReviewCount = await initialReviewButtons.count();
-          console.log(`초기 리뷰 개수: ${lastReviewCount}개`);
-          
-          while (moreButtonExists && clickCount < maxClicks) {
-            try {
-              // 현재 리뷰 개수 확인 (스크롤 전)
-              const beforeScrollButtons = frame.locator('ul#_review_list > li.place_apply_pui');
-              const beforeScrollCount = await beforeScrollButtons.count();
-              
-              // 페이지 하단으로 스크롤하여 모든 리뷰가 로드되도록 함 (무한 스크롤 트리거)
-              // 여러 번 스크롤하여 무한 스크롤 트리거
-              for (let scrollAttempt = 0; scrollAttempt < 3; scrollAttempt++) {
-                await this.page.keyboard.press('End');
-                await this.page.waitForTimeout(2000);
-                
-                // iframe 내부에서도 스크롤 시도
-                try {
-                  await frame.evaluate(() => {
-                    window.scrollTo(0, document.body.scrollHeight);
-                  });
-                } catch (e) {
-                  // frame.evaluate가 실패하면 무시
-                }
-                await this.page.waitForTimeout(2000);
-              }
-              
-              // 스크롤 후 리뷰 개수 확인
-              const afterScrollButtons = frame.locator('ul#_review_list > li.place_apply_pui');
-              const afterScrollCount = await afterScrollButtons.count();
-              
-              if (afterScrollCount > beforeScrollCount) {
-                console.log(`스크롤 후 리뷰 개수 증가: ${beforeScrollCount}개 → ${afterScrollCount}개 ✅`);
-                lastReviewCount = afterScrollCount;
-                noChangeCount = 0;
-              }
-              
-              // 실제로 리뷰 목록을 더 불러오는 더보기 버튼 찾기
-              // 사용자 제공 선택자: #app-root > div > div > div:nth-child(7) > div:nth-child(3) > div.place_section.k1QQ5 > div.NSTUp > div > a
-              const loadMoreReviewButtons = frame.locator('div.NSTUp > div > a, div.place_section.k1QQ5 div.NSTUp > div > a');
-              
-              // "더보기" 버튼 찾기 (리뷰 내용 펼치기)
-              const moreButtons = frame.locator('a.pui__wFzIYl[data-pui-click-code="rvshowmore"]');
-              
-              // "펼쳐보기" 버튼 찾기 (키워드 펼치기)
-              const keywordMoreButtons = frame.locator('a.pui__jhpEyP.pui__ggzZJ8[data-pui-click-code="keywordmore"]');
-              
-              // 세 종류의 버튼 모두 확인
-              const loadMoreCount = await loadMoreReviewButtons.count();
-              const moreButtonCount = await moreButtons.count();
-              const keywordButtonCount = await keywordMoreButtons.count();
-              const buttonCount = loadMoreCount + moreButtonCount + keywordButtonCount;
-              
-              if (buttonCount > 0) {
-                // 현재 리뷰 개수 확인 (클릭 전)
-                const beforeButtons = frame.locator('ul#_review_list > li.place_apply_pui');
-                const beforeCount = await beforeButtons.count();
-                
-                // 첫 번째 더보기 버튼 클릭 (우선순위: 리뷰 목록 더보기 > 리뷰 내용 더보기 > 키워드 펼쳐보기)
-                try {
-                  let firstButton = null;
-                  let buttonType = '';
-                  
-                  // 1. 리뷰 목록을 더 불러오는 더보기 버튼 우선 클릭
-                  if (loadMoreCount > 0) {
-                    try {
-                      const loadMoreButton = loadMoreReviewButtons.first();
-                      const isVisible = await loadMoreButton.isVisible().catch(() => false);
-                      if (isVisible) {
-                        await loadMoreButton.scrollIntoViewIfNeeded();
-                        await this.page.waitForTimeout(1000);
-                        await loadMoreButton.click({ timeout: 5000 });
-                        await this.page.waitForTimeout(5000); // 리뷰 로딩 대기 시간 증가
-                        clickCount++;
-                        buttonType = '리뷰 목록 더보기';
-                        console.log(`${buttonType} 버튼 클릭 (${clickCount}번째) - 리뷰 목록 로드 중...`);
-                      }
-                    } catch (e) {
-                      console.log(`리뷰 목록 더보기 버튼 클릭 실패: ${e.message}`);
-                    }
-                  }
-                  // 2. 리뷰 더보기 버튼 클릭 (리뷰 내용 펼치기)
-                  else if (moreButtonCount > 0) {
-                    // 모든 더보기 버튼을 순차적으로 클릭
-                    for (let i = 0; i < Math.min(moreButtonCount, 5); i++) {
-                      try {
-                        const button = moreButtons.nth(i);
-                        const isVisible = await button.isVisible().catch(() => false);
-                        if (isVisible) {
-                          await button.scrollIntoViewIfNeeded();
-                          await this.page.waitForTimeout(500);
-                          await button.click({ timeout: 5000 });
-                          await this.page.waitForTimeout(3000);
-                          clickCount++;
-                        }
-                      } catch (e) {
-                        // 개별 버튼 클릭 실패는 무시하고 계속 진행
-                      }
-                    }
-                    buttonType = '리뷰 내용 더보기';
-                  } 
-                  // 3. 키워드 펼쳐보기 버튼 클릭 (키워드만 펼치는 버튼)
-                  else if (keywordButtonCount > 0) {
-                    // 모든 키워드 펼쳐보기 버튼을 순차적으로 클릭
-                    for (let i = 0; i < Math.min(keywordButtonCount, 10); i++) {
-                      try {
-                        const button = keywordMoreButtons.nth(i);
-                        const isVisible = await button.isVisible().catch(() => false);
-                        if (isVisible) {
-                          await button.scrollIntoViewIfNeeded();
-                          await this.page.waitForTimeout(500);
-                          await button.click({ timeout: 5000 });
-                          await this.page.waitForTimeout(2000);
-                          clickCount++;
-                        }
-                      } catch (e) {
-                        // 개별 버튼 클릭 실패는 무시하고 계속 진행
-                      }
-                    }
-                    buttonType = '키워드 펼쳐보기';
-                  }
-                  
-                  // 클릭 후 충분히 대기 (리뷰 로딩 시간 확보)
-                  await this.page.waitForTimeout(4000);
-                  
-                  // 페이지 하단으로 스크롤하여 추가 리뷰 로드 유도
-                  await this.page.keyboard.press('End');
-                  await this.page.waitForTimeout(2000);
-                  
-                  // 클릭 후 리뷰 개수 재확인
-                  const afterButtons = frame.locator('ul#_review_list > li.place_apply_pui');
-                  const afterCount = await afterButtons.count();
-                  
-                  if (afterCount > beforeCount) {
-                    console.log(`${buttonType} 버튼 클릭 (${clickCount}번째) - 리뷰: ${beforeCount}개 → ${afterCount}개 ✅`);
-                    lastReviewCount = afterCount;
-                    noChangeCount = 0; // 리뷰 개수 증가 시 카운터 리셋
-                  } else {
-                    console.log(`${buttonType} 버튼 클릭 (${clickCount}번째) - 리뷰: ${beforeCount}개 (변화 없음)`);
-                    noChangeCount++;
-                    
-                    // 리뷰 개수가 변하지 않은 경우가 연속으로 많으면 경고
-                    if (noChangeCount >= 5) {
-                      console.log(`경고: ${noChangeCount}번 연속으로 리뷰 개수가 변하지 않았습니다.`);
-                    }
-                  }
-                  
-                  // 더보기 버튼이 여전히 있는지 확인 (모든 종류의 버튼 확인)
-                  await this.page.waitForTimeout(2000); // 버튼 상태 확인 전 대기
-                  const stillLoadMoreButtons = frame.locator('div.NSTUp > div > a, div.place_section.k1QQ5 div.NSTUp > div > a');
-                  const stillMoreButtons = frame.locator('a.pui__wFzIYl[data-pui-click-code="rvshowmore"]');
-                  const stillKeywordButtons = frame.locator('a.pui__jhpEyP.pui__ggzZJ8[data-pui-click-code="keywordmore"]');
-                  const stillLoadMoreCount = await stillLoadMoreButtons.count();
-                  const stillMoreCount = await stillMoreButtons.count();
-                  const stillKeywordCount = await stillKeywordButtons.count();
-                  const stillCount = stillLoadMoreCount + stillMoreCount + stillKeywordCount;
-                  
-                  if (stillCount === 0) {
-                    console.log('더보기 버튼이 사라졌습니다. 모든 리뷰가 로드된 것으로 보입니다.');
-                    moreButtonExists = false;
-                  } else if (noChangeCount >= 10) {
-                    // 리뷰 개수가 10번 연속 변하지 않으면 중단
-                    console.log('리뷰 개수가 변하지 않아 더보기 버튼 클릭을 중단합니다.');
-                    moreButtonExists = false;
-                  }
-                } catch (clickError) {
-                  console.log(`더보기 버튼 클릭 실패 (${clickCount + 1}번째 시도): ${clickError.message}`);
-                  // 클릭 실패해도 더보기 버튼이 있으면 계속 시도
-                  await this.page.waitForTimeout(3000);
-                  clickCount++; // 실패해도 카운트 증가
-                  
-                  // 너무 많은 클릭 실패가 발생하면 중단
-                  if (clickCount > 20 && clickCount % 10 === 0) {
-                    console.log(`경고: ${clickCount}번 클릭했지만 리뷰가 로드되지 않을 수 있습니다.`);
-                  }
-                }
-              } else {
-                // 더보기 버튼이 없으면 종료
-                console.log('더보기 버튼이 더 이상 없습니다.');
-                moreButtonExists = false;
-              }
-            } catch (e) {
-              // 더보기 버튼을 찾을 수 없거나 오류 발생
-              console.log(`더보기 버튼 찾기 실패 (${clickCount + 1}번째 시도): ${e.message}`);
-              // 오류가 발생해도 잠시 대기 후 다시 시도
-              await this.page.waitForTimeout(2000);
-              clickCount++;
-              
-              // 너무 많은 오류가 발생하면 중단
-              if (clickCount > 50) {
-                console.log('너무 많은 오류가 발생하여 더보기 버튼 클릭을 중단합니다.');
-                break;
-              }
-            }
-          }
-          
-          if (clickCount > 0) {
-            console.log(`총 ${clickCount}번 더보기 버튼 클릭 완료`);
-          }
-          
-          // 최종 리뷰 개수 확인 (더보기 클릭 후 충분히 대기)
-          await this.page.waitForTimeout(5000); // 최종 로딩 대기 시간 증가
-          
-          // 페이지 하단으로 스크롤하여 모든 리뷰가 로드되도록 함
-          await this.page.keyboard.press('End');
-          await this.page.waitForTimeout(3000);
-          
-          // 리뷰 작성자 버튼 찾기 (업데이트된 로케이터 사용)
-          let reviewAuthorButtons = null;
-          let authorButtonCount = 0;
-          
-          // 리뷰 개수를 여러 번 확인하여 정확한 개수 얻기
-          let maxCount = 0;
-          for (let checkAttempt = 0; checkAttempt < 3; checkAttempt++) {
-            // 페이지 하단으로 스크롤하여 모든 리뷰가 로드되도록 함
-            await this.page.keyboard.press('End');
-            await this.page.waitForTimeout(2000);
-            
-            // 리뷰 리스트에서 직접 리뷰 아이템 찾기
-            const reviewItems = frame.locator('ul#_review_list > li.place_apply_pui');
-            const currentCount = await reviewItems.count();
-            
-            if (currentCount > maxCount) {
-              maxCount = currentCount;
-              reviewAuthorButtons = reviewItems;
-            }
-            
-            console.log(`리뷰 개수 확인 (${checkAttempt + 1}/3): ${currentCount}개`);
-          }
-          
-          authorButtonCount = maxCount;
-          
-          if (authorButtonCount > 0) {
-            console.log(`리뷰 아이템 ${authorButtonCount}개 발견`);
-          } else {
-            console.log('리뷰 아이템을 찾을 수 없습니다. 대체 방법 시도...');
-            // 대체 방법: 리뷰 작성자 버튼 패턴 (예: "백숙현v 리뷰 468 사진 3,416 팔로워")
-            const pattern1Buttons = frame.getByRole('button').filter({ 
-              hasText: /리뷰.*\d+.*사진|리뷰.*\d+.*팔로워/
-            });
-            authorButtonCount = await pattern1Buttons.count();
-            
-            if (authorButtonCount > 0) {
-              console.log(`리뷰 작성자 버튼 ${authorButtonCount}개 발견 (대체 방법)`);
-              reviewAuthorButtons = pattern1Buttons;
-            }
-          }
-          
-          console.log(`최종 리뷰 개수: ${authorButtonCount}개`);
-          
-          // 리뷰 추출 (업데이트된 로케이터 사용)
-          const maxReviews = authorButtonCount;
+          // 페이지 단위로 리뷰 수집 (요청하신 순서대로)
           let naverNoDateSkipCount = 0;
+          let processedReviewIndex = 0; // 처리된 리뷰 인덱스 (페이지가 바뀌어도 유지)
+          let shouldStop = false; // 날짜 필터링으로 인한 종료 플래그
           
-          // 모든 리뷰를 가져오도록 수정
-          for (let i = 0; i < maxReviews; i++) {
-            // 진행 상황 로그 (10개마다 또는 1분마다)
-            if (i === 0 || (i + 1) % 10 === 0 || (i + 1) === maxReviews) {
-              console.log(`[네이버맵] 리뷰 추출 진행 중: ${i + 1}/${maxReviews} (${Math.round((i + 1) / maxReviews * 100)}%)`);
+          while (!shouldStop) {
+            // 현재 페이지의 리뷰 개수 확인
+            await this.page.waitForTimeout(1000); // 페이지 로딩 대기
+            const reviewItems = frame.locator('ul#_review_list > li.place_apply_pui');
+            const currentPageReviewCount = await reviewItems.count();
+            
+            if (currentPageReviewCount === 0) {
+              console.log('현재 페이지에 리뷰가 없습니다.');
+              break;
             }
             
-            try {
-              // 리뷰 컨테이너 찾기 (직접 리뷰 아이템 사용)
-              let container = null;
-              let button = null;
-              
-              if (i < authorButtonCount && reviewAuthorButtons) {
-                try {
-                  // 리뷰 아이템 자체를 컨테이너로 사용
-                  container = reviewAuthorButtons.nth(i);
-                  
-                  // 리뷰 작성자 버튼 찾기 (리뷰 아이템 내에서)
-                  button = container.locator('button').filter({ 
-                    hasText: /리뷰.*\d+.*사진|리뷰.*\d+.*팔로워/
-                  }).first();
-                  
-                  // 버튼이 없으면 다른 패턴 시도
-                  const buttonCount = await button.count().catch(() => 0);
-                  if (buttonCount === 0) {
-                    button = container.locator('button').first();
-                  }
-                } catch (e) {
-                  // 리뷰 컨테이너 찾기 실패
-                  console.log(`리뷰 ${i + 1} 컨테이너 찾기 실패: ${e.message}`);
-                  continue;
-                }
-              } else {
-                break; // 더 이상 리뷰가 없음
+            console.log(`[네이버맵] 현재 페이지 리뷰 개수: ${currentPageReviewCount}개 (처리 시작 인덱스: ${processedReviewIndex})`);
+            
+            // 현재 페이지의 리뷰 추출
+            for (let i = processedReviewIndex; i < currentPageReviewCount; i++) {
+              // 진행 상황 로그 (10개마다)
+              if (i === 0 || (i + 1) % 10 === 0) {
+                console.log(`[네이버맵] 리뷰 추출 진행 중: ${i + 1}번째 리뷰 처리 중...`);
               }
+              
+              try {
+                // 리뷰 컨테이너 찾기
+                const container = reviewItems.nth(i);
+                
+                // 스크롤하여 리뷰가 보이도록 함
+                try {
+                  await container.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(300); // 스크롤 후 안정화 대기
+                } catch (e) {
+                  // 스크롤 실패는 무시하고 계속 진행
+                }
               
               // 리뷰 내용 찾기 (컨테이너 전체 텍스트)
               const allText = await container.textContent().catch(() => '');
@@ -1369,9 +1105,15 @@ class ScraperService {
               }
               
               // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
-              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate && reviewDate < filterDate) {
-                // 필터 날짜 이전 리뷰는 건너뜀
-                continue;
+              // 최신순으로 정렬되어 있으므로, 필터 범위를 벗어난 날짜를 만나면 이후 모든 리뷰도 범위를 벗어남
+              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate) {
+                if (reviewDate < filterDate) {
+                  // 필터 범위를 벗어난 날짜를 만남
+                  console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
+                  console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
+                  shouldStop = true;
+                  break; // 루프 종료
+                }
               }
               
               // visit_type 추출 (사용자 제공 선택자 사용) - content 추출 전에 먼저 추출
@@ -1614,15 +1356,13 @@ class ScraperService {
                   try {
                     // 날짜 필터링 확인
                     let shouldSave = true;
-                    if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
-                      const today = new Date();
-                      const filterDate = new Date(today);
-                      filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                    if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate && filterDate) {
                       if (reviewDate < filterDate) {
+                        // 필터 범위를 벗어난 날짜를 만남
+                        console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
+                        console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
                         shouldSave = false;
-                        if (i < 5) {
-                          console.log(`[네이버맵] 즉시 저장 스킵: 날짜 필터링 (${date} < ${filterDate.toISOString().split('T')[0]})`);
-                        }
+                        shouldStop = true; // 루프 종료 플래그 설정
                       }
                     }
                     
@@ -1671,8 +1411,10 @@ class ScraperService {
                         }
                       }
                     } else {
-                      // 날짜 필터링으로 스킵된 경우에도 통계용으로 추가
+                      // 날짜 필터링으로 스킵된 경우
                       reviews.push(reviewData);
+                      // shouldStop이 true이면 루프 종료
+                      break;
                     }
                   } catch (saveError) {
                     console.error(`[네이버맵] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
@@ -1693,66 +1435,65 @@ class ScraperService {
                     }
                   }
                   
-                  // 10개마다 현재까지 추출된 리뷰 개수 로그
-                  if (reviews.length % 10 === 0) {
-                    console.log(`[네이버맵] 리뷰 추출 완료: ${reviews.length}개 (진행: ${i + 1}/${maxReviews})`);
-                  }
                 }
               }
-            } catch (err) {
-              console.error(`리뷰 ${i + 1} 추출 오류:`, err.message);
+              } catch (err) {
+                console.error(`리뷰 ${i + 1} 추출 오류:`, err.message);
+              }
+              
+              // 날짜 필터링으로 종료해야 하는 경우
+              if (shouldStop) {
+                break;
+              }
+            }
+            
+            // 날짜 필터링으로 종료해야 하는 경우
+            if (shouldStop) {
+              break;
+            }
+            
+            // 현재 페이지의 모든 리뷰를 수집했으면 더보기 버튼 클릭하여 다음 페이지 로드
+            processedReviewIndex = currentPageReviewCount; // 처리된 인덱스 업데이트
+            
+            // 리뷰 목록을 더 불러오는 더보기 버튼 찾기
+            const loadMoreButton = frame.locator('div.NSTUp > div > a, div.place_section.k1QQ5 div.NSTUp > div > a').first();
+            const loadMoreCount = await loadMoreButton.count();
+            
+            if (loadMoreCount > 0) {
+              try {
+                const isVisible = await loadMoreButton.isVisible().catch(() => false);
+                if (isVisible) {
+                  await loadMoreButton.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(1000);
+                  await loadMoreButton.click({ timeout: 5000 });
+                  await this.page.waitForTimeout(3000); // 새 리뷰 로딩 대기
+                  console.log(`[네이버맵] 더보기 버튼 클릭 - 다음 페이지 로드 중...`);
+                  
+                  // 새 리뷰가 로드될 때까지 대기
+                  await this.page.waitForTimeout(2000);
+                } else {
+                  console.log('[네이버맵] 더보기 버튼이 보이지 않습니다.');
+                  break; // 더 이상 리뷰가 없음
+                }
+              } catch (e) {
+                console.log(`[네이버맵] 더보기 버튼 클릭 실패: ${e.message}`);
+                break; // 더보기 버튼 클릭 실패 시 종료
+              }
+            } else {
+              console.log('[네이버맵] 더보기 버튼이 없습니다. 모든 리뷰 수집 완료.');
+              break; // 더 이상 리뷰가 없음
             }
           }
           
-          console.log(`[네이버맵] 리뷰 추출 루프 완료: 총 ${reviews.length}개 리뷰 추출됨`);
+          console.log(`[네이버맵] 리뷰 추출 완료: 총 ${reviews.length}개 리뷰 추출됨, ${actualSavedCount}개 저장 성공`);
 
           if (naverNoDateSkipCount > 0) {
             console.log(`⚠️ [네이버맵] 날짜 파싱 실패로 스킵된 리뷰: ${naverNoDateSkipCount}개`);
           }
           
-          // 리뷰를 찾지 못한 경우, 전체 텍스트에서 패턴 찾기
-          if (reviews.length === 0) {
-            console.log('리뷰 버튼에서 추출 실패. 전체 텍스트 분석 시도...');
-            
-            const allText = await frame.locator('body').textContent().catch(() => '');
-            
-            // 리뷰 패턴 찾기 (예: "리뷰 내용... 별점 5점... 날짜...")
-            const reviewPattern = /([가-힣\w]+)\s*v?\s*리뷰[\s\S]{0,500}?(\d+\.?\d*)\s*점[\s\S]{0,300}?(\d{2}\.\d{1,2}\.\d{1,2})/g;
-            let match;
-            let reviewIndex = 0;
-            
-            while ((match = reviewPattern.exec(allText)) !== null && reviewIndex < 10) {
-              const parsedDate = (() => {
-                const dateMatch = match[3].match(/(\d{2})\.(\d{1,2})\.(\d{1,2})/);
-                if (dateMatch) {
-                  const year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
-                  return `${year}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`;
-                }
-                return null;
-              })();
-
-              // 날짜를 파싱하지 못하면 오늘로 저장하지 않고 스킵
-              if (!parsedDate) {
-                naverNoDateSkipCount++;
-                continue;
-              }
-
-              reviews.push({
-                content: match[0].substring(0, 500),
-                rating: parseFloat(match[2] || '0'),
-                nickname: match[1] || `사용자${reviewIndex + 1}`,
-                date: parsedDate,
-                visitKeyword: null,
-                reviewKeyword: null,
-                visitType: null,
-                emotion: null,
-                revisitFlag: false,
-              });
-              reviewIndex++;
-            }
+          if (shouldStop) {
+            console.log(`[네이버맵] 날짜 필터링 범위를 벗어나 자료수집을 종료했습니다.`);
           }
-          
-          console.log(`locator 방식으로 ${reviews.length}개 리뷰 추출`);
         } catch (e) {
           console.log('리뷰 추출 실패:', e.message);
           console.error('리뷰 추출 실패 상세:', e);
