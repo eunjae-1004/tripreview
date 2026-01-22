@@ -390,7 +390,7 @@ class ScraperService {
    * @param {string} companyName - 기업명 (검색어로 사용)
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
-  async scrapeNaverMap(companyName, dateFilter = 'week') {
+  async scrapeNaverMap(companyName, dateFilter = 'week', jobId = null, portalType = 'naver', saveImmediately = false) {
     try {
       console.log(`네이버맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter})`);
       
@@ -1576,7 +1576,7 @@ class ScraperService {
               const visitKeyword = emotion || null;
               
               if (content.trim().length > 10 || rating > 0 || keywords.length > 0 || nickname !== `사용자${i + 1}`) {
-                reviews.push({
+                const reviewData = {
                   content: content.trim() || allText.substring(0, 200) || `리뷰 ${i + 1}`,
                   rating,
                   nickname: nickname.trim(),
@@ -1586,11 +1586,73 @@ class ScraperService {
                   visitType: visitType,
                   emotion: null, // 네이버에는 emotion 값이 없으므로 null
                   revisitFlag,
-                });
+                };
                 
-                // 10개마다 현재까지 추출된 리뷰 개수 로그
-                if (reviews.length % 10 === 0) {
-                  console.log(`[네이버맵] 리뷰 추출 완료: ${reviews.length}개 (진행: ${i + 1}/${maxReviews})`);
+                // 즉시 저장 방식이 활성화된 경우 즉시 저장
+                if (saveImmediately && companyName && date) {
+                  try {
+                    // 날짜 필터링 확인
+                    let shouldSave = true;
+                    if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
+                      const today = new Date();
+                      const filterDate = new Date(today);
+                      filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
+                      if (reviewDate < filterDate) {
+                        shouldSave = false;
+                      }
+                    }
+                    
+                    if (shouldSave) {
+                      const analysis = this.analyzeText(
+                        reviewData.content,
+                        rating,
+                        reviewData.visitKeyword,
+                        reviewData.reviewKeyword
+                      );
+                      
+                      const saved = await this.saveReview({
+                        portalUrl: '네이버맵',
+                        companyName,
+                        reviewDate: date,
+                        content: reviewData.content,
+                        rating: rating || null,
+                        nickname: reviewData.nickname,
+                        visitKeyword: reviewData.visitKeyword || null,
+                        reviewKeyword: reviewData.reviewKeyword || null,
+                        visitType: reviewData.visitType || null,
+                        emotion: reviewData.emotion || null,
+                        revisitFlag: reviewData.revisitFlag || false,
+                        nRating: analysis.nRating,
+                        nEmotion: analysis.nEmotion,
+                        nCharCount: analysis.nCharCount,
+                        title: null,
+                        additionalInfo: null,
+                      });
+                      
+                      if (saved) {
+                        // 저장 성공 시에만 reviews 배열에 추가 (통계용)
+                        reviews.push(reviewData);
+                        if (reviews.length % 10 === 0) {
+                          console.log(`[네이버맵] 리뷰 추출 및 저장 완료: ${reviews.length}개 (진행: ${i + 1}/${maxReviews})`);
+                        }
+                      } else {
+                        // 중복이거나 저장 실패한 경우에도 통계용으로 추가
+                        reviews.push(reviewData);
+                      }
+                    }
+                  } catch (saveError) {
+                    console.error(`[네이버맵] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+                    // 저장 실패해도 통계용으로 추가
+                    reviews.push(reviewData);
+                  }
+                } else {
+                  // 기존 방식: 배열에 추가만 함
+                  reviews.push(reviewData);
+                  
+                  // 10개마다 현재까지 추출된 리뷰 개수 로그
+                  if (reviews.length % 10 === 0) {
+                    console.log(`[네이버맵] 리뷰 추출 완료: ${reviews.length}개 (진행: ${i + 1}/${maxReviews})`);
+                  }
                 }
               }
             } catch (err) {
@@ -5239,10 +5301,12 @@ class ScraperService {
       reviews = await this.scrapeAgoda(companyName, dateFilter, agodaUrl);
     } else if (portalType === 'naver') {
       // 네이버맵은 companyName으로 검색하여 스크래핑
-      reviews = await this.scrapeNaverMap(companyName, dateFilter);
+      // 즉시 저장 방식으로 변경 (메모리 효율성)
+      reviews = await this.scrapeNaverMap(companyName, dateFilter, jobId, 'naver', true);
     } else if (portalUrl && portalUrl.includes('naver.com')) {
       // 네이버맵 URL이 제공된 경우에도 companyName으로 검색 (더보기 버튼 클릭 방식)
-      reviews = await this.scrapeNaverMap(companyName, dateFilter);
+      // 즉시 저장 방식으로 변경 (메모리 효율성)
+      reviews = await this.scrapeNaverMap(companyName, dateFilter, jobId, 'naver', true);
     } else if (!portalUrl || portalUrl.includes('kakao.com')) {
       // 카카오맵은 URL이 없어도 companyName으로 검색하여 스크래핑
       reviews = await this.scrapeKakaoMap(companyName, dateFilter);
