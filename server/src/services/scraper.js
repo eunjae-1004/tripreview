@@ -925,6 +925,11 @@ class ScraperService {
           
           // 모든 리뷰를 가져오도록 수정
           for (let i = 0; i < maxReviews; i++) {
+            // 진행 상황 로그 (10개마다 또는 1분마다)
+            if (i === 0 || (i + 1) % 10 === 0 || (i + 1) === maxReviews) {
+              console.log(`[네이버맵] 리뷰 추출 진행 중: ${i + 1}/${maxReviews} (${Math.round((i + 1) / maxReviews * 100)}%)`);
+            }
+            
             try {
               // 리뷰 컨테이너 찾기 (직접 리뷰 아이템 사용)
               let container = null;
@@ -1480,11 +1485,18 @@ class ScraperService {
                   emotion: null, // 네이버에는 emotion 값이 없으므로 null
                   revisitFlag,
                 });
+                
+                // 10개마다 현재까지 추출된 리뷰 개수 로그
+                if (reviews.length % 10 === 0) {
+                  console.log(`[네이버맵] 리뷰 추출 완료: ${reviews.length}개 (진행: ${i + 1}/${maxReviews})`);
+                }
               }
             } catch (err) {
-              console.error(`리뷰 ${i} 추출 오류:`, err.message);
+              console.error(`리뷰 ${i + 1} 추출 오류:`, err.message);
             }
           }
+          
+          console.log(`[네이버맵] 리뷰 추출 루프 완료: 총 ${reviews.length}개 리뷰 추출됨`);
 
           if (naverNoDateSkipCount > 0) {
             console.log(`⚠️ [네이버맵] 날짜 파싱 실패로 스킵된 리뷰: ${naverNoDateSkipCount}개`);
@@ -1535,10 +1547,14 @@ class ScraperService {
           console.log(`locator 방식으로 ${reviews.length}개 리뷰 추출`);
         } catch (e) {
           console.log('리뷰 추출 실패:', e.message);
+          console.error('리뷰 추출 실패 상세:', e);
         }
       }
 
-      console.log(`네이버맵 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      console.log(`✅ 네이버맵 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      if (reviews.length === 0) {
+        console.log('⚠️ 네이버맵에서 리뷰를 찾지 못했습니다. 선택자나 페이지 구조가 변경되었을 수 있습니다.');
+      }
       return reviews;
     } catch (error) {
       console.error('네이버맵 스크래핑 실패:', error);
