@@ -7,14 +7,20 @@ import jobService from './services/jobService.js';
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Railway 배포 시 환경 변수 확인
-console.log('환경 변수 확인:');
-console.log(`- PORT: ${process.env.PORT || '미설정 (기본값 3000 사용)'}`);
+// Railway 배포 시 환경 변수 확인 (서버 시작 전에 먼저 출력)
+console.log('[서버 시작] 환경 변수 확인 중...');
+const rawPort = process.env.PORT;
+console.log(`- PORT 환경 변수: ${rawPort || '미설정'}`);
 console.log(`- NODE_ENV: ${process.env.NODE_ENV || '미설정'}`);
 console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : '미설정'}`);
+
+const app = express();
+// Railway는 자동으로 PORT 환경 변수를 설정합니다
+// Railway Networking에서 설정한 포트와 일치해야 합니다
+const PORT = rawPort ? parseInt(rawPort, 10) : 3000;
+console.log(`[서버 시작] 사용할 포트: ${PORT} (${rawPort ? '환경 변수에서' : '기본값'})`);
+
+console.log('[서버 시작] Express 앱 생성 완료');
 
 // Health check를 가장 먼저 등록 (서버 시작 전에도 응답 가능)
 // Railway Healthcheck는 서버가 요청을 처리할 수 있으면 성공으로 간주
@@ -89,6 +95,8 @@ cron.schedule('0 2 * * 1', async () => {
 // 서버 시작
 let serverReady = false;
 
+console.log(`[서버 시작] 포트 ${PORT}에서 서버 시작 시도 중...`);
+
 const server = app.listen(PORT, '0.0.0.0', () => {
   serverReady = true;
   console.log(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
@@ -124,14 +132,19 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   }
 });
 
-// 서버 에러 처리
+// 서버 시작 실패 시 로그
 server.on('error', (err) => {
-  console.error('서버 에러:', err);
+  console.error('[서버 시작 실패]', err);
   if (err.code === 'EADDRINUSE') {
-    console.error(`포트 ${PORT}가 이미 사용 중입니다.`);
+    console.error(`❌ 포트 ${PORT}가 이미 사용 중입니다.`);
+    process.exit(1);
+  } else {
+    console.error(`❌ 서버 시작 실패: ${err.message}`);
     process.exit(1);
   }
 });
+
+// 서버 에러는 위에서 처리됨
 
 // 프로세스 종료 시 정리
 process.on('SIGTERM', () => {
