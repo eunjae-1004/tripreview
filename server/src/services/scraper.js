@@ -810,23 +810,65 @@ class ScraperService {
                   return { dateStr: d.toISOString().split('T')[0], dateObj: d };
                 }
 
-                // "MM.DD." 또는 "M.D." 형태(연도 없음) → 올해로 가정
+                // "MM.DD.요일" 또는 "M.D.요일" 형태(연도 없음, 요일 포함) → 올해로 가정
+                // 예: "1.12.월" → 2026-01-12
+                const mdWeekdayMatch = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
+                if (mdWeekdayMatch) {
+                  const month = mdWeekdayMatch[1].padStart(2, '0');
+                  const day = mdWeekdayMatch[2].padStart(2, '0');
+                  const monthNum = parseInt(month, 10);
+                  const dayNum = parseInt(day, 10);
+                  
+                  // 월과 일 유효성 검증
+                  if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+                    const year = String(today.getFullYear());
+                    const dateStr = `${year}-${month}-${day}`;
+                    const d = new Date(dateStr);
+                    // 만약 미래 날짜로 파싱되면 작년으로 보정 (예: 1월에 12.31. 같은 케이스)
+                    if (d > today) {
+                      const prevYear = String(today.getFullYear() - 1);
+                      const prevStr = `${prevYear}-${month}-${day}`;
+                      return { dateStr: prevStr, dateObj: new Date(prevStr) };
+                    }
+                    // Date 객체 유효성 검증
+                    if (!Number.isNaN(d.getTime()) && 
+                        d.getFullYear() == year && 
+                        d.getMonth() + 1 == monthNum && 
+                        d.getDate() == dayNum) {
+                      return { dateStr, dateObj: d };
+                    }
+                  }
+                }
+                
+                // "MM.DD." 또는 "M.D." 형태(연도 없음, 요일 없음) → 올해로 가정
                 // "MM." 형태(일자 없음) → 1일로 가정
-                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})?\.?/);
+                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})?\.?$/);
                 if (mdMatch) {
                   const month = mdMatch[1].padStart(2, '0');
                   // 일자가 없으면 1일로 기본값 설정
                   const day = mdMatch[2] ? mdMatch[2].padStart(2, '0') : '01';
-                  const year = String(today.getFullYear());
-                  const dateStr = `${year}-${month}-${day}`;
-                  const d = new Date(dateStr);
-                  // 만약 미래 날짜로 파싱되면 작년으로 보정 (예: 1월에 12.31. 같은 케이스)
-                  if (d > today) {
-                    const prevYear = String(today.getFullYear() - 1);
-                    const prevStr = `${prevYear}-${month}-${day}`;
-                    return { dateStr: prevStr, dateObj: new Date(prevStr) };
+                  const monthNum = parseInt(month, 10);
+                  const dayNum = parseInt(day, 10);
+                  
+                  // 월과 일 유효성 검증
+                  if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+                    const year = String(today.getFullYear());
+                    const dateStr = `${year}-${month}-${day}`;
+                    const d = new Date(dateStr);
+                    // 만약 미래 날짜로 파싱되면 작년으로 보정 (예: 1월에 12.31. 같은 케이스)
+                    if (d > today) {
+                      const prevYear = String(today.getFullYear() - 1);
+                      const prevStr = `${prevYear}-${month}-${day}`;
+                      return { dateStr: prevStr, dateObj: new Date(prevStr) };
+                    }
+                    // Date 객체 유효성 검증
+                    if (!Number.isNaN(d.getTime()) && 
+                        d.getFullYear() == year && 
+                        d.getMonth() + 1 == monthNum && 
+                        d.getDate() == dayNum) {
+                      return { dateStr, dateObj: d };
+                    }
                   }
-                  return { dateStr, dateObj: d };
                 }
                 
                 // "MM" 형태(연도와 일자 없음) → 올해 MM월 1일로 가정
