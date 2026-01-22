@@ -1074,10 +1074,12 @@ class ScraperService {
                 }
 
                 // "MM.DD." 또는 "M.D." 형태(연도 없음) → 올해로 가정
-                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})\.?/);
+                // "MM." 형태(일자 없음) → 1일로 가정
+                const mdMatch = t.match(/(\d{1,2})\.(\d{1,2})?\.?/);
                 if (mdMatch) {
                   const month = mdMatch[1].padStart(2, '0');
-                  const day = mdMatch[2].padStart(2, '0');
+                  // 일자가 없으면 1일로 기본값 설정
+                  const day = mdMatch[2] ? mdMatch[2].padStart(2, '0') : '01';
                   const year = String(today.getFullYear());
                   const dateStr = `${year}-${month}-${day}`;
                   const d = new Date(dateStr);
@@ -1089,48 +1091,128 @@ class ScraperService {
                   }
                   return { dateStr, dateObj: d };
                 }
+                
+                // "MM" 형태(연도와 일자 없음) → 올해 MM월 1일로 가정
+                const monthOnlyMatch = t.match(/^(\d{1,2})$/);
+                if (monthOnlyMatch) {
+                  const month = monthOnlyMatch[1].padStart(2, '0');
+                  const monthNum = parseInt(month, 10);
+                  if (monthNum >= 1 && monthNum <= 12) {
+                    const year = String(today.getFullYear());
+                    const dateStr = `${year}-${month}-01`;
+                    const d = new Date(dateStr);
+                    if (d > today) {
+                      const prevYear = String(today.getFullYear() - 1);
+                      const prevStr = `${prevYear}-${month}-01`;
+                      return { dateStr: prevStr, dateObj: new Date(prevStr) };
+                    }
+                    return { dateStr, dateObj: d };
+                  }
+                }
 
                 // "YYYY.MM.DD" 또는 "YY.MM.DD" 형태
+                // 주의: "25.12.15"는 "2025-12-15"를 의미 (25 = 2025년)
                 const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
                 if (ymdMatch) {
                   let year = ymdMatch[1];
+                  let month = ymdMatch[2].padStart(2, '0');
+                  let day = ymdMatch[3].padStart(2, '0');
+                  
+                  // 2자리 연도 처리: "25" → "2025"
                   if (year.length === 2) {
-                    year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+                    const yearNum = parseInt(year, 10);
+                    // 0-50은 2000-2050, 51-99는 1951-1999로 해석
+                    year = yearNum < 50 ? `20${year}` : `19${year}`;
                   }
-                  const month = ymdMatch[2].padStart(2, '0');
-                  const day = ymdMatch[3].padStart(2, '0');
+                  
+                  // 날짜 유효성 검증: 월은 1-12, 일은 1-31 범위
+                  const monthNum = parseInt(month, 10);
+                  const dayNum = parseInt(day, 10);
+                  
+                  // 만약 첫 번째 숫자가 4자리인데 월 범위를 벗어나면, 순서가 잘못된 것일 수 있음
+                  // 예: "2026.25.12" → 실제로는 "25.12.XX" 형식일 수 있음
+                  if (ymdMatch[1].length === 4 && (monthNum > 12 || dayNum > 31)) {
+                    // 순서가 잘못되었을 가능성: "2026.25.12" → "25.12.XX"로 재해석
+                    const altMatch = t.match(/(\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                    if (altMatch) {
+                      const altYear = altMatch[1];
+                      const altMonth = altMatch[2].padStart(2, '0');
+                      const altDay = altMatch[3].padStart(2, '0');
+                      const altYearNum = parseInt(altYear, 10);
+                      const altMonthNum = parseInt(altMonth, 10);
+                      const altDayNum = parseInt(altDay, 10);
+                      
+                      if (altMonthNum >= 1 && altMonthNum <= 12 && altDayNum >= 1 && altDayNum <= 31) {
+                        const finalYear = altYearNum < 50 ? `20${altYear}` : `19${altYear}`;
+                        const dateStr = `${finalYear}-${altMonth}-${altDay}`;
+                        const d = new Date(dateStr);
+                        if (!Number.isNaN(d.getTime()) && 
+                            d.getFullYear() == finalYear && 
+                            d.getMonth() + 1 == altMonthNum && 
+                            d.getDate() == altDayNum) {
+                          return { dateStr, dateObj: d };
+                        }
+                      }
+                    }
+                    return null; // 잘못된 날짜 형식
+                  }
+                  
+                  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+                    return null; // 잘못된 날짜 형식
+                  }
+                  
                   const dateStr = `${year}-${month}-${day}`;
                   const d = new Date(dateStr);
-                  if (!Number.isNaN(d.getTime())) {
+                  // Date 객체 유효성 검증
+                  if (!Number.isNaN(d.getTime()) && 
+                      d.getFullYear() == year && 
+                      d.getMonth() + 1 == monthNum && 
+                      d.getDate() == dayNum) {
                     return { dateStr, dateObj: d };
                   }
                 }
 
                 // "YYYY-MM-DD" 또는 "YY-MM-DD" 형태
-                const ymdDashMatch = t.match(/(\d{4}|\d{2})-(\d{1,2})-(\d{1,2})/);
+                // "YYYY-MM" 또는 "YY-MM" 형태(일자 없음) → 1일로 가정
+                const ymdDashMatch = t.match(/(\d{4}|\d{2})-(\d{1,2})(?:-(\d{1,2}))?/);
                 if (ymdDashMatch) {
                   let year = ymdDashMatch[1];
                   if (year.length === 2) {
                     year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
                   }
                   const month = ymdDashMatch[2].padStart(2, '0');
-                  const day = ymdDashMatch[3].padStart(2, '0');
+                  // 일자가 없으면 1일로 기본값 설정
+                  const day = ymdDashMatch[3] ? ymdDashMatch[3].padStart(2, '0') : '01';
+                  
+                  // 날짜 유효성 검증
+                  const monthNum = parseInt(month, 10);
+                  const dayNum = parseInt(day, 10);
+                  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+                    return null; // 잘못된 날짜 형식 (예: "2026-25-12")
+                  }
+                  
                   const dateStr = `${year}-${month}-${day}`;
                   const d = new Date(dateStr);
-                  if (!Number.isNaN(d.getTime())) {
+                  // Date 객체 유효성 검증
+                  if (!Number.isNaN(d.getTime()) && 
+                      d.getFullYear() == year && 
+                      d.getMonth() + 1 == monthNum && 
+                      d.getDate() == dayNum) {
                     return { dateStr, dateObj: d };
                   }
                 }
 
                 // "YYYY/MM/DD" 또는 "YY/MM/DD" 형태
-                const ymdSlashMatch = t.match(/(\d{4}|\d{2})\/(\d{1,2})\/(\d{1,2})/);
+                // "YYYY/MM" 또는 "YY/MM" 형태(일자 없음) → 1일로 가정
+                const ymdSlashMatch = t.match(/(\d{4}|\d{2})\/(\d{1,2})(?:\/(\d{1,2}))?/);
                 if (ymdSlashMatch) {
                   let year = ymdSlashMatch[1];
                   if (year.length === 2) {
                     year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
                   }
                   const month = ymdSlashMatch[2].padStart(2, '0');
-                  const day = ymdSlashMatch[3].padStart(2, '0');
+                  // 일자가 없으면 1일로 기본값 설정
+                  const day = ymdSlashMatch[3] ? ymdSlashMatch[3].padStart(2, '0') : '01';
                   const dateStr = `${year}-${month}-${day}`;
                   const d = new Date(dateStr);
                   if (!Number.isNaN(d.getTime())) {
@@ -1201,12 +1283,30 @@ class ScraperService {
                       }
                       month = dateMatch[2].padStart(2, '0');
                       day = dateMatch[3].padStart(2, '0');
+                      
+                      // 날짜 유효성 검증: 월은 1-12, 일은 1-31 범위여야 함
+                      const monthNum = parseInt(month, 10);
+                      const dayNum = parseInt(day, 10);
+                      if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+                        // 잘못된 날짜 형식 (예: "2026-25-12" 같은 경우)
+                        if (i < 5) {
+                          console.log(`[네이버맵] 잘못된 날짜 형식 스킵: "${dateText}" → ${year}-${month}-${day} (월: ${monthNum}, 일: ${dayNum})`);
+                        }
+                        continue; // 다음 패턴 시도
+                      }
+                      
                       const dateStr = `${year}-${month}-${day}`;
                       const d = new Date(dateStr);
-                      if (!Number.isNaN(d.getTime())) {
+                      // Date 객체가 유효한지 확인 (예: 2월 30일 같은 경우)
+                      if (!Number.isNaN(d.getTime()) && 
+                          d.getFullYear() == year && 
+                          d.getMonth() + 1 == monthNum && 
+                          d.getDate() == dayNum) {
                         date = dateStr;
                         reviewDate = d;
                         break;
+                      } else if (i < 5) {
+                        console.log(`[네이버맵] 날짜 유효성 검증 실패: "${dateText}" → ${dateStr} (Date 객체: ${d.toISOString()})`);
                       }
                     }
 
