@@ -391,6 +391,7 @@ class ScraperService {
    * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
    */
   async scrapeNaverMap(companyName, dateFilter = 'week', jobId = null, portalType = 'naver', saveImmediately = false) {
+    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
       console.log(`네이버맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
@@ -1633,10 +1634,11 @@ class ScraperService {
                       });
                       
                       if (saved) {
+                        actualSavedCount++; // 실제 저장 성공 개수 증가
                         // 저장 성공 시에만 reviews 배열에 추가 (통계용)
                         reviews.push(reviewData);
-                        if (reviews.length <= 10 || reviews.length % 50 === 0) {
-                          console.log(`✅ [네이버맵 즉시 저장 성공] ${reviews.length}번째: ${reviewData.nickname} - date: ${date}`);
+                        if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                          console.log(`✅ [네이버맵 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
                         }
                       } else {
                         // 중복이거나 저장 실패한 경우에도 통계용으로 추가
@@ -1740,6 +1742,14 @@ class ScraperService {
       if (reviews.length === 0) {
         console.log('⚠️ 네이버맵에서 리뷰를 찾지 못했습니다. 선택자나 페이지 구조가 변경되었을 수 있습니다.');
       }
+      
+      // 즉시 저장 방식인 경우 실제 저장 개수를 reviews 배열에 메타데이터로 추가
+      if (saveImmediately) {
+        // reviews 배열에 실제 저장 개수를 저장 (scrapeByPortal에서 사용)
+        reviews._actualSavedCount = actualSavedCount;
+        console.log(`[네이버맵] 실제 저장 개수: ${actualSavedCount}개 (추출: ${reviews.length}개)`);
+      }
+      
       return reviews;
     } catch (error) {
       console.error('네이버맵 스크래핑 실패:', error);
@@ -5373,14 +5383,10 @@ class ScraperService {
     // 네이버맵의 경우 즉시 저장 방식으로 이미 저장되었으므로, 여기서는 통계만 업데이트
     if (portalType === 'naver' || (portalUrl && portalUrl.includes('naver.com'))) {
       console.log(`[저장] 네이버맵은 즉시 저장 방식으로 이미 저장되었습니다. 통계만 업데이트합니다.`);
-      // 이미 저장된 리뷰 개수를 확인하기 위해 중복 체크
-      let savedCount = 0;
-      for (const review of reviews) {
-        // 간단한 중복 체크 (실제로는 DB에서 확인해야 하지만, 여기서는 통계만)
-        savedCount++;
-      }
-      console.log(`[저장] 네이버맵 저장 완료: ${savedCount}개 리뷰 처리됨`);
-      return savedCount;
+      // scrapeNaverMap()에서 실제 저장 개수를 _actualSavedCount로 저장했음
+      const actualSavedCount = reviews._actualSavedCount !== undefined ? reviews._actualSavedCount : reviews.length;
+      console.log(`[저장] 네이버맵 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+      return actualSavedCount;
     }
     
     console.log(`[저장] 리뷰 저장 루프 시작 (${reviews.length}개 처리 예정)...`);
