@@ -892,8 +892,11 @@ class ScraperService {
                 // "YYYY.MM.DD" 또는 "YY.MM.DD" 형태
                 // "YYYY.MM" 또는 "YY.MM" 형태(일자 없음) → 1일로 가정
                 // 주의: "25.12.15"는 "2025-12-15"를 의미 (25 = 2025년)
-                const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})(?:\.(\d{1,2}))?\.?/);
-                if (ymdMatch) {
+                // 주의: "1.12.월"은 "MM.DD.요일" 형식이므로 이 패턴에서 제외 (위에서 이미 처리됨)
+                // 요일이 포함된 경우는 위의 "MM.DD.요일" 패턴에서 처리되므로 여기서는 제외
+                if (!t.match(/[월화수목금토일]/)) {
+                  const ymdMatch = t.match(/(\d{4}|\d{2})\.(\d{1,2})(?:\.(\d{1,2}))?\.?/);
+                  if (ymdMatch) {
                   let year = ymdMatch[1];
                   let month = ymdMatch[2].padStart(2, '0');
                   // 일자가 없으면 1일로 기본값 설정
