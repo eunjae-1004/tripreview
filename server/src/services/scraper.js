@@ -5488,7 +5488,24 @@ class ScraperService {
       console.log(`[저장] ${portalName}은 즉시 저장 방식으로 이미 저장되었습니다. 통계만 업데이트합니다.`);
       // 각 스크래퍼에서 실제 저장 개수를 _actualSavedCount로 저장했음
       const actualSavedCount = reviews._actualSavedCount !== undefined ? reviews._actualSavedCount : reviews.length;
+      const errorCount = Math.max(0, reviews.length - actualSavedCount);
       console.log(`[저장] ${portalName} 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
+
+      // 즉시 저장 포털도 scraping_jobs 통계 반영 (최근 작업 목록에 성공 건수 표시)
+      if (jobId && pool) {
+        try {
+          await pool.query(
+            `UPDATE scraping_jobs 
+             SET total_reviews = total_reviews + $1,
+                 success_count = success_count + $2,
+                 error_count = error_count + $3
+             WHERE id = $4`,
+            [reviews.length, actualSavedCount, errorCount, jobId]
+          );
+        } catch (error) {
+          console.error('scraping_jobs 업데이트 실패 (즉시 저장):', error);
+        }
+      }
       return actualSavedCount;
     }
     

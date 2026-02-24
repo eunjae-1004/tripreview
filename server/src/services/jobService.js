@@ -4,6 +4,8 @@ import ScraperService from './scraper.js';
 /**
  * 스크래핑 작업 관리 서비스
  */
+const MAX_PROGRESS_LOG_LINES = 500;
+
 class JobService {
   constructor() {
     this.currentJob = null;
@@ -11,6 +13,13 @@ class JobService {
     this.cancelRequested = false;
     this.currentProgress = null; // { companyName, portal, attempt, phase }
     this.scraper = null; // 현재 실행 중인 ScraperService 인스턴스 (중지 시 강제 종료용)
+    /** 실시간 진행 로그 (최근 N줄) */
+    this.progressLog = [];
+    /** 디버그: 단계마다 클릭하여 진행 */
+    this.breakpointMode = false;
+    /** 브레이크포인트에서 대기 중일 때 resolve */
+    this.continueResolve = null;
+    this.waitingForContinue = false;
   }
 
   setProgress(progress) {
@@ -19,6 +28,47 @@ class JobService {
 
   getProgress() {
     return this.currentProgress;
+  }
+
+  appendProgressLog(msg) {
+    const line = `[${new Date().toISOString().slice(11, 23)}] ${msg}`;
+    this.progressLog.push(line);
+    if (this.progressLog.length > MAX_PROGRESS_LOG_LINES) {
+      this.progressLog = this.progressLog.slice(-MAX_PROGRESS_LOG_LINES);
+    }
+  }
+
+  getProgressLog() {
+    return this.progressLog.slice();
+  }
+
+  clearProgressLog() {
+    this.progressLog = [];
+  }
+
+  /**
+   * 디버그 브레이크포인트: breakpointMode일 때만 다음 단계로 넘어가기 전에 대기.
+   * 클라이언트가 POST /jobs/continue 호출 시 재개됨.
+   */
+  async waitForUserContinue() {
+    if (!this.breakpointMode) return;
+    this.waitingForContinue = true;
+    this.appendProgressLog('⏸ [대기] 다음 단계로 진행하려면 화면에서 "다음 단계"를 클릭하세요.');
+    await new Promise((resolve) => {
+      this.continueResolve = resolve;
+    });
+    this.waitingForContinue = false;
+    this.continueResolve = null;
+    this.appendProgressLog('▶ 진행 재개');
+  }
+
+  /** 클라이언트가 "다음 단계" 클릭 시 호출 */
+  continueFromBreakpoint() {
+    if (this.continueResolve) {
+      this.continueResolve();
+      this.continueResolve = null;
+    }
+    this.waitingForContinue = false;
   }
 
   /**
@@ -164,17 +214,20 @@ class JobService {
    * @param {string} dateFilter - 'all' (전체), 'week' (일주일 간격), 'twoWeeks' (2주 간격)
    * @param {string|null} companyName - 특정 기업명 (null이면 전체 기업)
    */
-  async runScrapingJob(dateFilter = 'week', companyName = null, portals = null) {
+  async runScrapingJob(dateFilter = 'week', companyName = null, portals = null, options = {}) {
     if (this.isRunning) {
       throw new Error('이미 실행 중인 작업이 있습니다.');
     }
 
     this.isRunning = true;
     this.cancelRequested = false;
+    this.breakpointMode = options.breakpointMode === true;
+    this.clearProgressLog();
     let job = null;
     let scraper = null;
 
     try {
+      this.appendProgressLog(`작업 시작 - dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}${this.breakpointMode ? ' [브레이크포인트 모드]' : ''}`);
       this.requirePool();
       job = await this.createJob();
       this.currentJob = job;
@@ -184,14 +237,17 @@ class JobService {
       let successCount = 0;
       let errorCount = 0;
       console.log(`[작업 시작] 스크래핑 작업 시작 - jobId: ${job.id}, dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}`);
-      
+      this.appendProgressLog(`작업 #${job.id} 생성됨`);
+
       await this.updateJobStatus(job.id, 'running', {
         startedAt: new Date(),
       });
 
+      this.appendProgressLog('브라우저 초기화 중...');
       console.log(`[작업 시작] 브라우저 초기화 시작...`);
       await scraper.init();
       console.log(`[작업 시작] 브라우저 초기화 완료`);
+      this.appendProgressLog('브라우저 초기화 완료');
 
       // companies 테이블에서 기업 목록 조회
       let companies;
@@ -292,14 +348,18 @@ class JobService {
         : ['naver', 'kakao', 'yanolja', 'agoda', 'google']; // 기본값: 모든 포털
       
       console.log(`[작업 시작] 스크래핑할 포털: ${enabledPortals.join(', ')} (입력: ${portals ? JSON.stringify(portals) : 'null'})`);
+      this.appendProgressLog(`기업 ${companies.rows.length}개, 포털: ${enabledPortals.join(', ')}`);
 
       for (const company of companies.rows) {
         this.ensureNotCancelled();
         const companyLabel = `company="${company.company_name}"`;
+        this.appendProgressLog(`--- 기업: ${company.company_name} ---`);
 
         // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
         if (enabledPortals.includes('naver')) {
           try {
+            this.appendProgressLog(`[다음] ${company.company_name} - 네이버맵 스크래핑`);
+            await this.waitForUserContinue();
             console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 시작 (검색: ${company.company_name})`);
             this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'starting' });
             const naverCount = await runWithRetry(
@@ -314,10 +374,12 @@ class JobService {
                 )
             );
             successCount += naverCount;
+            this.appendProgressLog(`네이버맵 완료: ${naverCount}개 저장`);
             console.log(`기업 "${company.company_name}" 네이버맵 스크래핑 완료: ${naverCount}개 리뷰 저장`);
             this.setProgress({ company: company.company_name, portal: 'naver', attempt: 1, phase: 'done' });
           } catch (error) {
             errorCount++;
+            this.appendProgressLog(`네이버맵 실패: ${error?.message || String(error)}`);
             console.error(`네이버맵 스크래핑 실패 (${companyLabel}):`, error);
             await this.appendJobError(
               job.id,
@@ -328,6 +390,8 @@ class JobService {
 
         if (enabledPortals.includes('kakao')) {
           try {
+            this.appendProgressLog(`[다음] ${company.company_name} - 카카오맵 스크래핑`);
+            await this.waitForUserContinue();
             console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 시작 (검색: ${company.company_name})`);
             this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'starting' });
             const kakaoCount = await runWithRetry(
@@ -335,10 +399,12 @@ class JobService {
               () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'kakao')
             );
             successCount += kakaoCount;
+            this.appendProgressLog(`카카오맵 완료: ${kakaoCount}개 저장`);
             console.log(`기업 "${company.company_name}" 카카오맵 스크래핑 완료: ${kakaoCount}개 리뷰 저장`);
             this.setProgress({ company: company.company_name, portal: 'kakao', attempt: 1, phase: 'done' });
           } catch (error) {
             errorCount++;
+            this.appendProgressLog(`카카오맵 실패: ${error?.message || String(error)}`);
             console.error(`카카오맵 스크래핑 실패 (${companyLabel}):`, error);
             await this.appendJobError(
               job.id,
@@ -349,6 +415,8 @@ class JobService {
 
         if (enabledPortals.includes('yanolja')) {
           try {
+            this.appendProgressLog(`[다음] ${company.company_name} - 야놀자 스크래핑`);
+            await this.waitForUserContinue();
             console.log(`기업 "${company.company_name}" 야놀자 스크래핑 시작 (검색: ${company.company_name})`);
             this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'starting' });
             const yanoljaCount = await runWithRetry(
@@ -356,10 +424,12 @@ class JobService {
               () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'yanolja')
             );
             successCount += yanoljaCount;
+            this.appendProgressLog(`야놀자 완료: ${yanoljaCount}개 저장`);
             console.log(`기업 "${company.company_name}" 야놀자 스크래핑 완료: ${yanoljaCount}개 리뷰 저장`);
             this.setProgress({ company: company.company_name, portal: 'yanolja', attempt: 1, phase: 'done' });
           } catch (error) {
             errorCount++;
+            this.appendProgressLog(`야놀자 실패: ${error?.message || String(error)}`);
             console.error(`야놀자 스크래핑 실패 (${companyLabel}):`, error);
             await this.appendJobError(
               job.id,
@@ -370,6 +440,8 @@ class JobService {
 
         if (enabledPortals.includes('agoda') && company.agoda_url) {
           try {
+            this.appendProgressLog(`[다음] ${company.company_name} - 아고다 스크래핑`);
+            await this.waitForUserContinue();
             console.log(`기업 "${company.company_name}" 아고다 스크래핑 시작: ${company.agoda_url}`);
             this.setProgress({ company: company.company_name, portal: 'agoda', attempt: 1, phase: 'starting' });
             const agodaCount = await runWithRetry(
@@ -377,10 +449,12 @@ class JobService {
               () => scraper.scrapeByPortal(company.agoda_url, company.company_name, dateFilter, job.id, 'agoda')
             );
             successCount += agodaCount;
+            this.appendProgressLog(`아고다 완료: ${agodaCount}개 저장`);
             console.log(`기업 "${company.company_name}" 아고다 스크래핑 완료: ${agodaCount}개 리뷰 저장`);
             this.setProgress({ company: company.company_name, portal: 'agoda', attempt: 1, phase: 'done' });
           } catch (error) {
             errorCount++;
+            this.appendProgressLog(`아고다 실패: ${error?.message || String(error)}`);
             console.error(`아고다 스크래핑 실패 (${companyLabel}):`, error);
             await this.appendJobError(
               job.id,
@@ -393,6 +467,8 @@ class JobService {
 
         if (enabledPortals.includes('google')) {
           try {
+            this.appendProgressLog(`[다음] ${company.company_name} - 구글 스크래핑`);
+            await this.waitForUserContinue();
             console.log(`기업 "${company.company_name}" 구글 스크래핑 시작 (검색: ${company.company_name})`);
             this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'starting' });
             const googleCount = await runWithRetry(
@@ -400,10 +476,12 @@ class JobService {
               () => scraper.scrapeByPortal(null, company.company_name, dateFilter, job.id, 'google')
             );
             successCount += googleCount;
+            this.appendProgressLog(`구글 완료: ${googleCount}개 저장`);
             console.log(`기업 "${company.company_name}" 구글 스크래핑 완료: ${googleCount}개 리뷰 저장`);
             this.setProgress({ company: company.company_name, portal: 'google', attempt: 1, phase: 'done' });
           } catch (error) {
             errorCount++;
+            this.appendProgressLog(`구글 실패: ${error?.message || String(error)}`);
             console.error(`구글 스크래핑 실패 (${companyLabel}):`, error);
             await this.appendJobError(
               job.id,
@@ -451,6 +529,12 @@ class JobService {
       this.cancelRequested = false;
       this.currentProgress = null;
       this.scraper = null;
+      this.breakpointMode = false;
+      this.waitingForContinue = false;
+      if (this.continueResolve) {
+        try { this.continueResolve(); } catch (_) {}
+        this.continueResolve = null;
+      }
     }
 
     return job;

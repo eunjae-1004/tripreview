@@ -33,8 +33,8 @@ router.post('/jobs/start', async (req, res) => {
       return res.status(400).json({ error: '이미 실행 중인 작업이 있습니다.' });
     }
 
-    // 날짜 필터 옵션 (기본값: 'week')
-    const { dateFilter = 'week', companyName = null, portals = null } = req.body;
+    // 날짜 필터 옵션 (기본값: 'week'), breakpointMode: 디버그 시 단계마다 클릭하여 진행
+    const { dateFilter = 'week', companyName = null, portals = null, breakpointMode = false } = req.body;
     
     if (dateFilter !== 'all' && dateFilter !== 'week' && dateFilter !== 'twoWeeks') {
       return res.status(400).json({ error: 'dateFilter는 "all", "week", "twoWeeks" 중 하나여야 합니다.' });
@@ -58,7 +58,7 @@ router.post('/jobs/start', async (req, res) => {
     console.log(`[작업 시작] dateFilter: ${dateFilter}, companyName: ${companyName || 'null'}, portals: ${portals ? JSON.stringify(portals) : 'null'}`);
 
     // 비동기로 실행 (응답은 즉시 반환)
-    jobService.runScrapingJob(dateFilter, companyName, portals).catch((error) => {
+    jobService.runScrapingJob(dateFilter, companyName, portals, { breakpointMode: breakpointMode === true }).catch((error) => {
       console.error('스크래핑 작업 실행 오류:', error);
     });
 
@@ -94,19 +94,35 @@ router.post('/jobs/stop', async (req, res) => {
 });
 
 /**
- * 현재 작업 상태 조회
+ * 현재 작업 상태 조회 (실시간 진행 로그 포함)
  */
 router.get('/jobs/status', async (req, res) => {
   try {
     const currentJob = await jobService.getCurrentJob();
     const isRunning = jobService.getIsRunning();
     const progress = jobService.getProgress ? jobService.getProgress() : null;
+    const progressLog = jobService.getProgressLog ? jobService.getProgressLog() : [];
+    const waitingForContinue = jobService.waitingForContinue === true;
 
     res.json({
       isRunning,
       currentJob: currentJob || null,
       progress: progress || null,
+      progressLog: progressLog || [],
+      waitingForContinue: waitingForContinue || false,
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 디버그 브레이크포인트: 다음 단계로 진행 (클릭 시 호출)
+ */
+router.post('/jobs/continue', (req, res) => {
+  try {
+    jobService.continueFromBreakpoint();
+    res.json({ message: '다음 단계로 진행합니다.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

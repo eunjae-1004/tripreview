@@ -68,6 +68,9 @@ export default function Home() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [selectedPortals, setSelectedPortals] = useState<string[]>(['naver', 'kakao', 'yanolja', 'agoda', 'google']);
+  const [breakpointMode, setBreakpointMode] = useState(false);
+  const [progressLog, setProgressLog] = useState<string[]>([]);
+  const [waitingForContinue, setWaitingForContinue] = useState(false);
   
   const availablePortals = [
     { id: 'naver', name: '네이버맵' },
@@ -88,6 +91,8 @@ export default function Home() {
       const data = await response.json();
       setIsRunning(data.isRunning);
       setCurrentJob(data.currentJob);
+      setProgressLog(Array.isArray(data.progressLog) ? data.progressLog : []);
+      setWaitingForContinue(data.waitingForContinue === true);
 
       // 진행 상황 한 줄 표시 (로그 누적 X)
       const p: Progress | null = data.progress || null;
@@ -104,6 +109,22 @@ export default function Home() {
       }
     } catch (error) {
       console.error('상태 조회 실패:', error);
+    }
+  };
+
+  // 다음 단계로 진행 (브레이크포인트 모드에서 클릭 시)
+  const handleContinue = async () => {
+    try {
+      await fetch(`${API_URL}/api/admin/jobs/continue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': ADMIN_SECRET,
+        },
+      });
+      await fetchStatus();
+    } catch (error) {
+      console.error('다음 단계 요청 실패:', error);
     }
   };
 
@@ -168,6 +189,7 @@ export default function Home() {
         dateFilter: dateFilter, // 'all', 'week', 'twoWeeks'
         companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
         portals: selectedPortals.length > 0 ? selectedPortals : null, // 선택된 포털 (빈 배열이면 null = 전체)
+        breakpointMode: breakpointMode, // 디버그: 단계마다 클릭하여 진행
       };
       
       console.log(`[API] 작업 시작 요청: ${API_URL}/api/admin/jobs/start`);
@@ -274,22 +296,24 @@ export default function Home() {
     }
   };
 
-  // 초기 로드 및 주기적 업데이트
+  // 초기 로드 및 주기적 업데이트 (실행 중일 때는 1초마다, 아니면 5초마다)
   useEffect(() => {
     fetchStatus();
     fetchRecentJobs();
     fetchCompanies();
     fetchStatistics();
 
-    // 5초마다 상태 업데이트
+    const intervalMs = isRunning ? 1000 : 5000;
     const interval = setInterval(() => {
       fetchStatus();
-      fetchRecentJobs();
-      fetchStatistics();
-    }, 5000);
+      if (!isRunning) {
+        fetchRecentJobs();
+        fetchStatistics();
+      }
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isRunning]);
 
   // 상태에 따른 표시 텍스트
   const getStatusText = (status: string) => {
@@ -430,6 +454,23 @@ export default function Home() {
             </p>
           </div>
 
+          {/* 디버그: 단계마다 클릭하여 진행 (브레이크포인트) */}
+          <div className={styles.filterSection}>
+            <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={breakpointMode}
+                onChange={(e) => setBreakpointMode(e.target.checked)}
+                disabled={loading || isRunning}
+                className={styles.radioInput}
+              />
+              <span>디버그: 단계마다 클릭하여 진행 (브레이크포인트)</span>
+            </label>
+            <p className={styles.filterDescription}>
+              체크 후 실행하면, 각 기업·포털별로 값을 가져오기 직전에 멈춥니다. 화면의 &quot;다음 단계&quot; 버튼을 클릭할 때마다 다음 단계로 진행합니다.
+            </p>
+          </div>
+
           <div className={styles.controls}>
             <button
               onClick={handleStart}
@@ -536,6 +577,34 @@ export default function Home() {
               </>
             )}
           </div>
+
+          {/* 실시간 진행 로그 */}
+          {(isRunning || progressLog.length > 0) && (
+            <div className={styles.progressLogSection}>
+              <h3 className={styles.progressLogTitle}>실시간 진행 로그</h3>
+              <div className={styles.progressLogBox} role="log">
+                {progressLog.length === 0 ? (
+                  <div className={styles.progressLogLine}>대기 중...</div>
+                ) : (
+                  progressLog.map((line, i) => (
+                    <div key={i} className={styles.progressLogLine}>
+                      {line}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 브레이크포인트 대기 시: 다음 단계로 진행하려면 클릭 */}
+          {waitingForContinue && (
+            <div className={styles.continueOverlay} onClick={handleContinue} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && handleContinue()}>
+              <div className={styles.continueBox}>
+                <p className={styles.continueText}>다음 단계로 진행하려면 클릭하세요</p>
+                <p className={styles.continueSub}>(또는 이 영역을 클릭)</p>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* 통계 */}
