@@ -639,7 +639,7 @@ export default function Home() {
             <p className={styles.empty}>작업 내역이 없습니다.</p>
           ) : (
             <div className={styles.jobsList}>
-              {recentJobs.map((job) => (
+              {recentJobs.filter((j): j is Job => j != null && typeof j.id === 'number').map((job) => (
                 <div key={job.id} className={styles.jobItem}>
                   <div className={styles.jobHeader}>
                     <span className={styles.jobId}>작업 #{job.id}</span>

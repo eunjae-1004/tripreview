@@ -171,16 +171,18 @@ class JobService {
 
     this.isRunning = true;
     this.cancelRequested = false;
-    this.requirePool();
-    const job = await this.createJob();
-    this.currentJob = job;
-
-    const scraper = new ScraperService();
-    this.scraper = scraper;
-    let successCount = 0;
-    let errorCount = 0;
+    let job = null;
+    let scraper = null;
 
     try {
+      this.requirePool();
+      job = await this.createJob();
+      this.currentJob = job;
+
+      scraper = new ScraperService();
+      this.scraper = scraper;
+      let successCount = 0;
+      let errorCount = 0;
       console.log(`[작업 시작] 스크래핑 작업 시작 - jobId: ${job.id}, dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}`);
       
       await this.updateJobStatus(job.id, 'running', {
@@ -422,22 +424,27 @@ class JobService {
     } catch (error) {
       console.error('스크래핑 작업 실패:', error);
       const msg = error?.message || String(error);
-      await this.appendJobError(job.id, `job 실패: ${msg}`);
       this.setProgress({ company: null, portal: null, attempt: null, phase: 'failed' });
 
-      // cancelRequested가 켜진 상태에서 발생한 어떤 에러든 "중지"로 처리
-      if (this.cancelRequested || error?.name === 'JobCancelledError') {
-        await this.updateJobStatus(job.id, 'stopped', {
-          completedAt: new Date(),
-          errorMessage: msg,
-        });
-      } else {
-        await this.updateJobStatus(job.id, 'failed', {
-          completedAt: new Date(),
-          errorMessage: msg,
-        });
+      if (job) {
+        await this.appendJobError(job.id, `job 실패: ${msg}`);
+        if (this.cancelRequested || error?.name === 'JobCancelledError') {
+          await this.updateJobStatus(job.id, 'stopped', {
+            completedAt: new Date(),
+            errorMessage: msg,
+          });
+        } else {
+          await this.updateJobStatus(job.id, 'failed', {
+            completedAt: new Date(),
+            errorMessage: msg,
+          });
+        }
       }
-      await scraper.close();
+      try {
+        if (scraper) await scraper.close();
+      } catch (e) {
+        // close 실패 시 무시
+      }
     } finally {
       this.isRunning = false;
       this.currentJob = null;
@@ -453,13 +460,20 @@ class JobService {
    * 작업 중지
    */
   async stopJob() {
-    if (!this.isRunning || !this.currentJob) {
+    if (!this.isRunning) {
       throw new Error('실행 중인 작업이 없습니다.');
     }
+    if (!this.currentJob || this.currentJob.id == null) {
+      this.isRunning = false;
+      this.currentJob = null;
+      this.scraper = null;
+      throw new Error('실행 중인 작업이 없습니다. (작업 정보가 초기화되지 않은 상태입니다.)');
+    }
 
+    const jobId = this.currentJob.id;
     this.cancelRequested = true;
     this.setProgress({ company: null, portal: null, attempt: null, phase: 'stopping' });
-    await this.appendJobError(this.currentJob.id, '사용자가 중지 요청을 보냈습니다. 브라우저를 종료하여 즉시 중단합니다.');
+    await this.appendJobError(jobId, '사용자가 중지 요청을 보냈습니다. 브라우저를 종료하여 즉시 중단합니다.');
 
     // 가능하면 즉시 Playwright를 종료해서 현재 대기/네비게이션을 끊는다
     try {
@@ -471,7 +485,7 @@ class JobService {
     }
 
     // UI/상태 조회가 즉시 반영되도록 stopped로 업데이트
-    await this.updateJobStatus(this.currentJob.id, 'stopped', {
+    await this.updateJobStatus(jobId, 'stopped', {
       completedAt: new Date(),
       errorMessage: '사용자 중지 요청',
     });
