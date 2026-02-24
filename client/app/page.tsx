@@ -467,7 +467,9 @@ export default function Home() {
               <span>디버그: 단계마다 클릭하여 진행 (브레이크포인트)</span>
             </label>
             <p className={styles.filterDescription}>
-              체크 후 실행하면, 각 기업·포털별로 값을 가져오기 직전에 멈춥니다. 화면의 &quot;다음 단계&quot; 버튼을 클릭할 때마다 다음 단계로 진행합니다.
+              체크 후 실행하면, 각 기업·포털별로 값을 가져오기 직전에 멈춥니다. 화면의 &quot;다음 단계&quot;를 클릭할 때마다 다음 단계로 진행합니다.
+              <br />
+              <strong>작업 화면(브라우저)</strong>을 보려면 서버를 <strong>로컬에서 실행</strong>해야 합니다. (Railway 등 원격 서버에서는 브라우저 창이 보이지 않습니다.)
             </p>
           </div>
 

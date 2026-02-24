@@ -61,12 +61,15 @@ class ScraperService {
 
   /**
    * 브라우저 초기화
+   * @param {object} options - { headless: boolean } 디버그 시 작업 화면(브라우저)을 보이려면 headless: false (로컬 실행 시만 유효)
    */
-  async init() {
+  async init(options = {}) {
+    const headless = options.headless !== false; // 디버그 모드에서 false 전달 시 브라우저 창 표시
     const browserPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
     this.browser = await chromium.launch({
-      headless: true,
+      headless,
       ...(browserPath && { executablePath: browserPath }),
+      ...(!headless && { slowMo: 80 }), // 창이 보일 때 동작이 보이도록 약간 느리게
     });
     
     // User-Agent 및 브라우저 컨텍스트 설정 (봇 차단 방지 및 일관된 결과)
