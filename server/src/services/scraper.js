@@ -61,16 +61,33 @@ class ScraperService {
 
   /**
    * 브라우저 초기화
-   * @param {object} options - { headless: boolean } 디버그 시 작업 화면(브라우저)을 보이려면 headless: false (로컬 실행 시만 유효)
+   * @param {object} options - { headless: boolean } true면 창 없이 실행. false면 브라우저 창 표시 (로컬+PLAYWRIGHT_HEADED=1 시만 권장)
    */
   async init(options = {}) {
-    const headless = options.headless !== false; // 디버그 모드에서 false 전달 시 브라우저 창 표시
+    let headless = options.headless !== false;
     const browserPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
-    this.browser = await chromium.launch({
+
+    const launchOptions = {
       headless,
       ...(browserPath && { executablePath: browserPath }),
-      ...(!headless && { slowMo: 80 }), // 창이 보일 때 동작이 보이도록 약간 느리게
-    });
+      ...(!headless && { slowMo: 80 }),
+    };
+
+    try {
+      this.browser = await chromium.launch(launchOptions);
+    } catch (err) {
+      // 원격 서버(디스플레이 없음)에서 headless: false로 실패하면 자동으로 headless로 재시도
+      if (!headless) {
+        console.warn('[Scraper] 브라우저 창 표시 모드 실패, 백그라운드 모드로 재시도:', err?.message || err);
+        headless = true;
+        this.browser = await chromium.launch({
+          headless: true,
+          ...(browserPath && { executablePath: browserPath }),
+        });
+      } else {
+        throw err;
+      }
+    }
     
     // User-Agent 및 브라우저 컨텍스트 설정 (봇 차단 방지 및 일관된 결과)
     // 참고: launchPersistentContext를 사용하면 프로필을 저장할 수 있지만, 현재는 일반 launch 사용

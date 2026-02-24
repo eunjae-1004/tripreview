@@ -468,8 +468,13 @@ export default function Home() {
             </label>
             <p className={styles.filterDescription}>
               체크 후 실행하면, 각 기업·포털별로 값을 가져오기 직전에 멈춥니다. 화면의 &quot;다음 단계&quot;를 클릭할 때마다 다음 단계로 진행합니다.
-              <br />
-              <strong>작업 화면(브라우저)</strong>을 보려면 서버를 <strong>로컬에서 실행</strong>해야 합니다. (Railway 등 원격 서버에서는 브라우저 창이 보이지 않습니다.)
+            </p>
+            <p className={styles.filterDescription} style={{ marginTop: 8, padding: 10, background: '#fff8e1', borderRadius: 6 }}>
+              <strong>작업 화면(브라우저 창)을 보려면:</strong>
+              <br />1) 서버를 <strong>로컬 PC에서</strong> 실행하세요 (Railway가 아닌, 본인 컴퓨터에서).
+              <br />2) 서버 실행 <strong>전에</strong> 터미널에서 <code style={{ background: '#eee', padding: '2px 6px' }}>PLAYWRIGHT_HEADED=1</code> 환경 변수를 설정하세요.
+              <br />3) 관리자 페이지도 <strong>로컬 주소</strong>(예: http://localhost:3000)로 접속한 뒤 디버그 체크하고 실행하세요.
+              <br />※ 배포된 사이트에서 실행하면 작업이 Railway 서버에서 돌아가서 브라우저 창이 보이지 않습니다.
             </p>
           </div>
 

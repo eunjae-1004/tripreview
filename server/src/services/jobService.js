@@ -245,10 +245,11 @@ class JobService {
 
       this.appendProgressLog('브라우저 초기화 중...');
       console.log(`[작업 시작] 브라우저 초기화 시작...`);
-      // 디버그(브레이크포인트) 모드일 때는 브라우저 창 표시 (로컬 실행 시 작업 화면 확인용)
-      await scraper.init({ headless: !this.breakpointMode });
+      // 디버그 모드 + PLAYWRIGHT_HEADED=1 일 때만 브라우저 창 표시 (로컬에서 작업 화면 보려면 서버 실행 전에 환경변수 설정)
+      const wantHeaded = this.breakpointMode && process.env.PLAYWRIGHT_HEADED === '1';
+      await scraper.init({ headless: !wantHeaded });
       console.log(`[작업 시작] 브라우저 초기화 완료`);
-      this.appendProgressLog(this.breakpointMode ? '브라우저 초기화 완료 (작업 화면 표시 모드)' : '브라우저 초기화 완료');
+      this.appendProgressLog(wantHeaded ? '브라우저 초기화 완료 (작업 화면 표시 모드)' : '브라우저 초기화 완료');
 
       // companies 테이블에서 기업 목록 조회
       let companies;
