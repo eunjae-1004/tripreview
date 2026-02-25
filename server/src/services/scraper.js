@@ -696,17 +696,31 @@ class ScraperService {
                     const rel = t.match(/(\d+)\s*(일|주|개월)\s*전/);
                     if (rel) { const n = parseInt(rel[1], 10); const d = new Date(today); if (rel[2] === '일') d.setDate(d.getDate() - n); else if (rel[2] === '주') d.setDate(d.getDate() - n * 7); else if (rel[2] === '개월') d.setMonth(d.getMonth() - n); reviewDate = d.toISOString().split('T')[0]; }
                     else {
-                      const md = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
-                      if (md) { const y = today.getFullYear(); reviewDate = `${y}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`; }
-                      else {
-                        const ymd = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
-                        if (ymd) {
-                          let y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
-                          const mo = ymd[2].padStart(2, '0');
-                          const dy = ymd[3].padStart(2, '0');
-                          const mn = parseInt(mo, 10);
-                          const dn = parseInt(dy, 10);
-                          if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                      const yyFirst = t.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})(?:\.(?:월|화|수|목|금|토|일))?$/);
+                      if (yyFirst) {
+                        const yy = parseInt(yyFirst[1], 10);
+                        const mo = yyFirst[2].padStart(2, '0');
+                        const dy = yyFirst[3].padStart(2, '0');
+                        const mn = parseInt(mo, 10);
+                        const dn = parseInt(dy, 10);
+                        if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) {
+                          const y = yy < 50 ? `20${yyFirst[1]}` : `19${yyFirst[1]}`;
+                          reviewDate = `${y}-${mo}-${dy}`;
+                        }
+                      }
+                      if (!reviewDate) {
+                        const md = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
+                        if (md) { const y = today.getFullYear(); reviewDate = `${y}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`; }
+                        else {
+                          const ymd = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                          if (ymd) {
+                            let y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
+                            const mo = ymd[2].padStart(2, '0');
+                            const dy = ymd[3].padStart(2, '0');
+                            const mn = parseInt(mo, 10);
+                            const dn = parseInt(dy, 10);
+                            if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                          }
                         }
                       }
                     }
@@ -714,19 +728,20 @@ class ScraperService {
                 }
               } catch (_) {}
               if (!reviewDate) {
-                const m = allText.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
-                if (m) {
-                  const y = new Date().getFullYear();
-                  reviewDate = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
-                } else {
-                  const ymd = allText.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
-                  if (ymd) {
-                    const y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
-                    const mo = ymd[2].padStart(2, '0');
-                    const dy = ymd[3].padStart(2, '0');
-                    const mn = parseInt(mo, 10);
-                    const dn = parseInt(dy, 10);
-                    if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                const ymd = allText.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                if (ymd) {
+                  const y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
+                  const mo = ymd[2].padStart(2, '0');
+                  const dy = ymd[3].padStart(2, '0');
+                  const mn = parseInt(mo, 10);
+                  const dn = parseInt(dy, 10);
+                  if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                }
+                if (!reviewDate) {
+                  const m = allText.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
+                  if (m) {
+                    const y = new Date().getFullYear();
+                    reviewDate = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
                   }
                 }
               }
@@ -1158,8 +1173,27 @@ class ScraperService {
                   return { dateStr: d.toISOString().split('T')[0], dateObj: d };
                 }
 
+                // "YY.MM.DD" 또는 "YY.MM.DD.요일" 형태를 MM.DD.요일보다 먼저 처리 (25.11.21 → 2025-11-21)
+                // 그렇지 않으면 "25.11.21.금"에서 "11.21.금"만 매칭되어 올해(2026)로 잘못 해석됨
+                const yyFirstMatch = t.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})(?:\.(?:월|화|수|목|금|토|일))?$/);
+                if (yyFirstMatch) {
+                  const yy = parseInt(yyFirstMatch[1], 10);
+                  const mo = yyFirstMatch[2].padStart(2, '0');
+                  const dy = yyFirstMatch[3].padStart(2, '0');
+                  const monthNum = parseInt(mo, 10);
+                  const dayNum = parseInt(dy, 10);
+                  if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+                    const year = yy < 50 ? `20${yyFirstMatch[1]}` : `19${yyFirstMatch[1]}`;
+                    const dateStr = `${year}-${mo}-${dy}`;
+                    const d = new Date(dateStr);
+                    if (!Number.isNaN(d.getTime()) && d.getFullYear() == year && d.getMonth() + 1 == monthNum && d.getDate() == dayNum) {
+                      return { dateStr, dateObj: d };
+                    }
+                  }
+                }
+
                 // "MM.DD.요일" 또는 "M.D.요일" 형태(연도 없음, 요일 포함) → 올해로 가정
-                // 예: "1.12.월" → 2026-01-12
+                // 예: "1.12.월" → 2026-01-12 (첫 숫자가 1~12일 때만, 위의 YY.MM.DD가 아님)
                 const mdWeekdayMatch = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
                 if (mdWeekdayMatch) {
                   const month = mdWeekdayMatch[1].padStart(2, '0');
