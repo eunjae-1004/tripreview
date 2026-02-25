@@ -732,13 +732,50 @@ class ScraperService {
             }
             processedReviewIndex = currentPageReviewCount;
 
-            const moreButton = frame.locator('a.place_btn_more:has-text("더보기"), a:has-text("더보기"), button:has-text("더보기")').first();
-            if (await moreButton.count() > 0 && await moreButton.isVisible().catch(() => false)) {
-              await moreButton.scrollIntoViewIfNeeded();
-              await this.page.waitForTimeout(500);
-              await moreButton.click({ timeout: 5000 });
-              await this.page.waitForTimeout(2500);
-            } else {
+            // 더보기 버튼: 여러 선택자 시도 (네이버맵 UI 변경 대응). 첫 페이지(10건) 후에는 스크롤 후 재탐색
+            const moreButtonSelectors = [
+              'a.place_btn_more:has-text("더보기")',
+              'a:has-text("더보기")',
+              'button:has-text("더보기")',
+              'div.NSTUp > div > a',
+              'div.place_section.k1QQ5 div.NSTUp > div > a',
+              '[class*="more"]:has-text("더보기")',
+            ];
+            let moreClicked = false;
+            for (const sel of moreButtonSelectors) {
+              try {
+                const btn = frame.locator(sel).first();
+                if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                  await btn.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(500);
+                  await btn.click({ timeout: 5000 });
+                  await this.page.waitForTimeout(2500);
+                  moreClicked = true;
+                  console.log(`[네이버맵] 더보기 클릭 성공 (선택자: ${sel.slice(0, 40)}...)`);
+                  break;
+                }
+              } catch (_) {}
+            }
+            if (!moreClicked && reviews.length <= 15) {
+              await frame.evaluate(() => window.scrollBy(0, 400));
+              await this.page.waitForTimeout(2000);
+              for (const sel of moreButtonSelectors) {
+                try {
+                  const btn = frame.locator(sel).first();
+                  if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                    await btn.scrollIntoViewIfNeeded();
+                    await this.page.waitForTimeout(500);
+                    await btn.click({ timeout: 5000 });
+                    await this.page.waitForTimeout(2500);
+                    moreClicked = true;
+                    console.log(`[네이버맵] 더보기 클릭 성공 (스크롤 후 재시도)`);
+                    break;
+                  }
+                } catch (_) {}
+              }
+            }
+            if (!moreClicked) {
+              console.log(`[네이버맵] 더보기 버튼 없음 또는 클릭 불가 → 수집 종료. 누적 ${reviews.length}개`);
               break;
             }
           }
@@ -5090,12 +5127,17 @@ class ScraperService {
         if (scrollAttempt < 4 || scrollAttempt % 8 === 0) {
           console.log(`[구글] 스크롤 ${scrollAttempt + 1} - scrollTop: ${lastScrollTop}, noChange: ${noChangeCount}, stuck: ${scrollStuckCount}, 누적: ${reviews.length}개`);
         }
-        // 리뷰 기간과 무관하게 동일한 종료 조건 사용 (기존 정상 동작 복원)
+        if (reviews.length <= 10 && (scrollAttempt === 0 || scrollAttempt === 14 || scrollAttempt === 29)) {
+          console.log(`[구글] 누적 ${reviews.length}건 → 최소 42번 스크롤·연속 24번 무변화까지 시도 (10건 이하 강화)`);
+        }
+        // 10건 이하일 때는 더 오래 시도 (가상 스크롤/지연 로딩 대응). 20건 이하도 완화
+        const veryFew = reviews.length <= 10;
         const collectedFew = reviews.length <= 20;
-        const minForExit = collectedFew ? 30 : minScrollBeforeExit;
-        const unchangedForExit = collectedFew ? 18 : unchangedLimit;
+        const minForExit = veryFew ? 42 : (collectedFew ? 30 : minScrollBeforeExit);
+        const unchangedForExit = veryFew ? 24 : (collectedFew ? 18 : unchangedLimit);
         const exitByNoChange = (scrollAttempt + 1 >= minForExit && noChangeCount >= unchangedForExit);
-        const exitByStuck = (scrollStuckCount >= scrollStuckLimit && scrollAttempt + 1 >= (collectedFew ? 22 : 15));
+        const minScrollForStuck = veryFew ? 35 : (collectedFew ? 22 : 15);
+        const exitByStuck = (scrollStuckCount >= scrollStuckLimit && scrollAttempt + 1 >= minScrollForStuck);
         if (exitByNoChange) {
           console.log(`[구글] 스크롤 중단(신규 없음): ${noChangeCount}번 연속 추가 0건, scrollTop=${lastScrollTop}, maxScroll=${scrollResult.maxScroll}, DOM리뷰=${currentCount}개 → 최종 수집 ${reviews.length}개`);
           break;
