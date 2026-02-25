@@ -361,12 +361,13 @@ class JobService {
       this.appendProgressLog(`기업 ${companies.rows.length}개, 포털: ${enabledPortals.join(', ')}`);
 
       for (const company of companies.rows) {
-        this.ensureNotCancelled();
-        const companyLabel = `company="${company.company_name}"`;
-        this.appendProgressLog(`--- 기업: ${company.company_name} ---`);
+        try {
+          this.ensureNotCancelled();
+          const companyLabel = `company="${company.company_name}"`;
+          this.appendProgressLog(`--- 기업: ${company.company_name} ---`);
 
-        // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
-        if (enabledPortals.includes('naver')) {
+          // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
+          if (enabledPortals.includes('naver')) {
           try {
             this.appendProgressLog(`[다음] ${company.company_name} - 네이버맵 스크래핑`);
             await this.waitForUserContinue();
@@ -498,6 +499,19 @@ class JobService {
               `google 실패 (${companyLabel}): ${error?.message || String(error)}`
             );
           }
+        }
+        } catch (companyError) {
+          if (companyError?.name === 'JobCancelledError') {
+            throw companyError;
+          }
+          const msg = companyError?.message || String(companyError);
+          errorCount++;
+          this.appendProgressLog(`기업 "${company.company_name}" 처리 중 오류: ${msg}`);
+          console.error(`기업 "${company.company_name}" 스크래핑 중 오류 (다음 기업으로 계속):`, companyError);
+          await this.appendJobError(
+            job.id,
+            `기업 "${company.company_name}" 오류: ${msg}`
+          );
         }
       }
 
