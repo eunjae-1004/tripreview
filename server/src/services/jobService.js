@@ -245,8 +245,9 @@ class JobService {
 
       this.appendProgressLog('브라우저 초기화 중...');
       console.log(`[작업 시작] 브라우저 초기화 시작...`);
-      // 디버그 모드 + PLAYWRIGHT_HEADED=1 일 때만 브라우저 창 표시 (로컬에서 작업 화면 보려면 서버 실행 전에 환경변수 설정)
-      const wantHeaded = this.breakpointMode && process.env.PLAYWRIGHT_HEADED === '1';
+      // 브라우저 화면 표시: PLAYWRIGHT_HEADED=1 이거나 개발 모드(NODE_ENV !== 'production')면 headed
+      // headless는 구글 등에서 리뷰가 덜 로드될 수 있으므로 개발 시에는 화면 보이도록 기본 설정
+      const wantHeaded = process.env.PLAYWRIGHT_HEADED === '1' || process.env.NODE_ENV !== 'production';
       await scraper.init({ headless: !wantHeaded });
       console.log(`[작업 시작] 브라우저 초기화 완료`);
       this.appendProgressLog(wantHeaded ? '브라우저 초기화 완료 (작업 화면 표시 모드)' : '브라우저 초기화 완료');
@@ -254,15 +255,22 @@ class JobService {
       // companies 테이블에서 기업 목록 조회
       let companies;
       if (companyName && companyName.trim()) {
-        // 특정 기업만 조회
+        // 특정 기업만 조회 (공백 유무 무시: "춘천베어스호텔" ↔ "춘천 베어스호텔")
+        const nameTrim = companyName.trim();
         companies = await pool.query(
           'SELECT * FROM companies WHERE company_name = $1',
-          [companyName.trim()]
+          [nameTrim]
         );
         if (companies.rows.length === 0) {
-          throw new Error(`기업 "${companyName.trim()}"을 찾을 수 없습니다.`);
+          companies = await pool.query(
+            `SELECT * FROM companies WHERE REPLACE(company_name, ' ', '') = REPLACE($1, ' ', '') LIMIT 1`,
+            [nameTrim]
+          );
         }
-        console.log(`특정 기업 스크래핑: "${companyName.trim()}"`);
+        if (companies.rows.length === 0) {
+          throw new Error(`기업 "${nameTrim}"을 찾을 수 없습니다.`);
+        }
+        console.log(`특정 기업 스크래핑: "${companies.rows[0].company_name}"`);
       } else {
         // 전체 기업 조회
         companies = await pool.query('SELECT * FROM companies');

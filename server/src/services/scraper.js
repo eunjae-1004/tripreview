@@ -541,8 +541,8 @@ class ScraperService {
           } else {
             console.log('⚠️ 최신순 정렬 버튼을 찾을 수 없습니다.');
           }
-        } catch (e) {
-          console.log(`⚠️ 최신순 정렬 실패: ${e.message}`);
+      } catch (e) {
+        console.log(`⚠️ 최신순 정렬 실패: ${e.message}`);
         }
       } catch (e) {
         // iframe이 없으면 메인 페이지에서 진행
@@ -550,20 +550,213 @@ class ScraperService {
         frame = this.page;
       }
 
-      // 네이버맵 리뷰 섹션 찾기
-      // 여러 가능한 선택자 시도
-      let reviews = [];
-      
-      // frame이 유효한지 확인
+      // 리뷰 목록이 DOM에 로드될 때까지 대기 (수집 전 필수)
+      if (frame && typeof frame.locator === 'function') {
+        try {
+          await frame.locator('ul#_review_list').waitFor({ state: 'attached', timeout: 10000 });
+          await this.page.waitForTimeout(2500);
+          // 리뷰 항목이 하나라도 나타날 때까지 추가 대기 (lazy 렌더링 대비)
+          try {
+            await frame.locator('ul#_review_list li').first().waitFor({ state: 'visible', timeout: 8000 });
+            await this.page.waitForTimeout(1500);
+          } catch (_) {}
+          console.log('[네이버맵] 리뷰 목록 로드 대기 완료');
+        } catch (e) {
+          console.log('[네이버맵] 리뷰 목록 대기 타임아웃 또는 미발견:', e.message);
+        }
+      }
+
+      // 리뷰 영역 스크롤하여 lazy-load된 항목 로드 (여러 번 스크롤해야 나오는 경우 대비)
       if (frame && typeof frame.evaluate === 'function') {
+        try {
+          const scrollSteps = 8;
+          const scrollPx = 400;
+          const pauseMs = 1200;
+          for (let step = 0; step < scrollSteps; step++) {
+            await frame.evaluate(({ scrollPx }) => {
+              const list = document.querySelector('ul#_review_list');
+              if (!list) return;
+              let el = list.parentElement;
+              while (el) {
+                const canScroll = el.scrollHeight > el.clientHeight && (el.scrollTop + el.clientHeight < el.scrollHeight - 20);
+                if (canScroll) {
+                  el.scrollTop += scrollPx;
+                  return;
+                }
+                el = el.parentElement;
+              }
+            }, { scrollPx });
+            await this.page.waitForTimeout(pauseMs);
+          }
+          await this.page.waitForTimeout(1000);
+          console.log(`[네이버맵] 리뷰 영역 스크롤 ${scrollSteps}회 완료 (lazy-load 반영)`);
+        } catch (e) {
+          console.log('[네이버맵] 리뷰 영역 스크롤 중 오류(무시):', e.message);
+        }
+      }
+
+      // 네이버맵 리뷰 섹션 찾기
+      // 1) locator 방식(ul#_review_list) 시도 → 클래스 변경 시 ul#_review_list li fallback → 2) 0건이면 evaluate
+      let reviews = [];
+
+      let reviewItemSelector = 'ul#_review_list > li.place_apply_pui';
+      let primaryCount = 0;
+      let fallbackCount = 0;
+      if (frame && typeof frame.locator === 'function') {
+        try {
+          primaryCount = await frame.locator('ul#_review_list > li.place_apply_pui').count();
+          fallbackCount = await frame.locator('ul#_review_list li').count();
+          if (primaryCount > 0) {
+            console.log(`[네이버맵] ul#_review_list > li.place_apply_pui 리뷰 ${primaryCount}개 발견 - locator 수집`);
+          } else if (fallbackCount > 0) {
+            reviewItemSelector = 'ul#_review_list li';
+            console.log(`[네이버맵] ul#_review_list li 리뷰 ${fallbackCount}개 발견 (place_apply_pui 미일치) - locator 수집`);
+          } else {
+            console.log(`[네이버맵] 리뷰 0개 - 선택자 미일치 (ul#_review_list > li.place_apply_pui: ${primaryCount}, ul#_review_list li: ${fallbackCount}). evaluate 시도`);
+          }
+        } catch (e) {
+          console.log('[네이버맵] locator count 실패:', e.message);
+        }
+      }
+
+      const useLocatorPath = frame && typeof frame.locator === 'function' && (primaryCount > 0 || fallbackCount > 0);
+
+      if (useLocatorPath) {
+        // locator 기반 수집 (더보기 클릭 포함)
+        try {
+          let filterDate = null;
+          let filterDateStr = null;
+          if (dateFilter === 'week') {
+            const today = new Date();
+            filterDate = new Date(today);
+            filterDate.setDate(today.getDate() - 7);
+            filterDateStr = filterDate.toISOString().split('T')[0];
+          } else if (dateFilter === 'twoWeeks') {
+            const today = new Date();
+            filterDate = new Date(today);
+            filterDate.setDate(today.getDate() - 14);
+            filterDateStr = filterDate.toISOString().split('T')[0];
+          }
+          let naverNoDateSkipCount = 0;
+          let processedReviewIndex = 0;
+          let shouldStop = false;
+          reviews = [];
+
+          while (!shouldStop) {
+            await this.page.waitForTimeout(1000);
+            const reviewItems = frame.locator(reviewItemSelector);
+            const currentPageReviewCount = await reviewItems.count();
+            if (currentPageReviewCount === 0) {
+              console.log('[네이버맵] 현재 페이지에 리뷰가 없습니다.');
+              break;
+            }
+            console.log(`[네이버맵] 현재 페이지 리뷰 ${currentPageReviewCount}개 (처리 인덱스: ${processedReviewIndex})`);
+
+            for (let i = processedReviewIndex; i < currentPageReviewCount; i++) {
+              const container = reviewItems.nth(i);
+              try { await container.scrollIntoViewIfNeeded(); await this.page.waitForTimeout(300); } catch (_) {}
+              const allText = await container.textContent().catch(() => '');
+              if (!allText || allText.trim().length < 10) continue;
+
+              let nickname = `사용자${i + 1}`;
+              try {
+                const nicknameEl = container.locator('.pui__NMi-Dp').first();
+                if (await nicknameEl.count() > 0) {
+                  const t = await nicknameEl.textContent().catch(() => '');
+                  if (t && t.trim()) nickname = t.trim();
+                }
+              } catch (_) {}
+
+              let rating = 0;
+              try {
+                const starEl = container.locator('[class*="star"], [aria-label*="별점"], [aria-label*="점"]');
+                if (await starEl.count() > 0) {
+                  const aria = await starEl.first().getAttribute('aria-label').catch(() => '');
+                  const m = aria.match(/(\d+\.?\d*)/);
+                  if (m) rating = parseFloat(m[1]);
+                }
+              } catch (_) {}
+              if (rating === 0) {
+                const m = allText.match(/(\d+\.?\d*)\s*점|별점[:\s]*(\d+\.?\d*)/);
+                if (m) rating = parseFloat(m[1] || m[2] || '0');
+              }
+
+              let reviewDate = null;
+              let skippedNoDate = false;
+              try {
+                const timeEl = container.locator('.pui__gfuUIT time').first();
+                if (await timeEl.count() > 0) {
+                  const dateText = await timeEl.textContent().catch(() => '') || '';
+                  const t = String(dateText).trim();
+                  const now = new Date();
+                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  if (t.includes('오늘')) reviewDate = today.toISOString().split('T')[0];
+                  else if (t.includes('어제')) { const d = new Date(today); d.setDate(d.getDate() - 1); reviewDate = d.toISOString().split('T')[0]; }
+                  else {
+                    const rel = t.match(/(\d+)\s*(일|주|개월)\s*전/);
+                    if (rel) { const n = parseInt(rel[1], 10); const d = new Date(today); if (rel[2] === '일') d.setDate(d.getDate() - n); else if (rel[2] === '주') d.setDate(d.getDate() - n * 7); else if (rel[2] === '개월') d.setMonth(d.getMonth() - n); reviewDate = d.toISOString().split('T')[0]; }
+                    else {
+                      const md = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
+                      if (md) { const y = today.getFullYear(); reviewDate = `${y}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`; }
+                    }
+                  }
+                }
+              } catch (_) {}
+              if (!reviewDate) {
+                const m = allText.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
+                if (m) {
+                  const y = new Date().getFullYear();
+                  reviewDate = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+                }
+              }
+              if (!reviewDate) { naverNoDateSkipCount++; skippedNoDate = true; }
+
+              let content = '';
+              try {
+                const contentEl = container.locator('[class*="comment"], [class*="text"], [class*="content"], .pui__vzH5F').first();
+                if (await contentEl.count() > 0) content = (await contentEl.textContent().catch(() => '') || '').trim();
+              } catch (_) {}
+              if (!content) content = allText.replace(/\s+/g, ' ').trim().slice(0, 2000);
+
+              const revisitMatch = allText.match(/(\d+)번째\s*방문/);
+              const revisitFlag = !!revisitMatch;
+
+              if (content || rating > 0) {
+                const item = { content, rating, nickname, date: reviewDate || new Date().toISOString().split('T')[0], visitKeyword: null, reviewKeyword: null, visitType: null, emotion: null, revisitFlag };
+                reviews.push(item);
+                if (saveImmediately && jobId && companyName && reviewDate && !skippedNoDate) {
+                  const saved = await this.saveReview({ portalUrl: '네이버맵', companyName, reviewDate, content, rating, nickname, revisitFlag, nRating: null, nEmotion: null, nCharCount: null, title: null, additionalInfo: null });
+                  if (saved) actualSavedCount++;
+                }
+              }
+            }
+            processedReviewIndex = currentPageReviewCount;
+
+            const moreButton = frame.locator('a.place_btn_more:has-text("더보기"), a:has-text("더보기"), button:has-text("더보기")').first();
+            if (await moreButton.count() > 0 && await moreButton.isVisible().catch(() => false)) {
+              await moreButton.scrollIntoViewIfNeeded();
+              await this.page.waitForTimeout(500);
+              await moreButton.click({ timeout: 5000 });
+              await this.page.waitForTimeout(2500);
+            } else {
+              break;
+            }
+          }
+          console.log(`[네이버맵] locator 방식 완료: ${reviews.length}개 추출, ${actualSavedCount}개 저장`);
+        } catch (e) {
+          console.log('[네이버맵] locator 방식 실패:', e.message);
+        }
+      }
+
+      // 2순위: locator로 0건이면 evaluate(구 선택자) 시도
+      if (reviews.length === 0 && frame && typeof frame.evaluate === 'function') {
         reviews = await frame.evaluate(() => {
         const results = [];
-        
-        // 네이버맵 리뷰 선택자 (실제 구조에 맞게 수정 필요)
-        // 일반적인 네이버맵 리뷰 구조
         const selectors = [
-          '.list_evaluation li', // 리뷰 리스트
-          '.review_item', 
+          'ul#_review_list > li.place_apply_pui',
+          'ul#_review_list li',
+          '.list_evaluation li',
+          '.review_item',
           '[class*="review"]',
           '[class*="Review"]',
           '.comment_list li',
@@ -592,7 +785,8 @@ class ScraperService {
 
             // 리뷰 내용 찾기
             const contentEl = el.querySelector('[class*="comment"], [class*="text"], [class*="content"], .review_text, .content, [data-testid*="review-text"]');
-            const content = contentEl ? contentEl.textContent.trim() : '';
+            let content = contentEl ? contentEl.textContent.trim() : '';
+            if (!content && el.textContent) content = el.textContent.replace(/\s+/g, ' ').trim().slice(0, 2000);
 
             // 닉네임 찾기
             const nicknameEl = el.querySelector('[class*="name"], [class*="user"], [class*="author"], .nickname, [data-testid*="user-name"]');
@@ -631,9 +825,10 @@ class ScraperService {
             const revisitMatch = revisitText.match(/(\d+)번째\s*방문/);
             const revisitFlag = revisitMatch ? true : false;
 
-            if (content || rating > 0) {
+            const hasMeaningfulText = el.textContent && el.textContent.trim().length > 15;
+            if (content || rating > 0 || hasMeaningfulText) {
               results.push({
-                content,
+                content: content || (el.textContent ? el.textContent.replace(/\s+/g, ' ').trim().slice(0, 2000) : ''),
                 rating,
                 nickname,
                 date,
@@ -651,6 +846,7 @@ class ScraperService {
 
         return results;
       });
+      if (reviews.length > 0) console.log(`[네이버맵] evaluate 방식 추출: ${reviews.length}개`);
       } else {
         // frame.evaluate를 사용할 수 없는 경우, locator를 사용하여 직접 추출
         console.log('⚠️ frame.evaluate를 사용할 수 없습니다. locator 방식으로 리뷰 추출 시도합니다.');
@@ -2796,782 +2992,9 @@ class ScraperService {
   }
 
   /**
-   * 구글 여행 스크래핑 (company_name으로 검색)
-   * @param {string} companyName - 기업명 (검색어로 사용)
-   * @param {string} dateFilter - 'all' (전체) 또는 'week' (일주일 간격)
+   * [구 구글 스크래핑 제거됨] 기존에는 scrapeGoogle이 두 번 정의되어 있었고, 나중 정의(div.Svr5cf.bKhjM + 스크롤)만 사용됩니다.
+   * 10건만 수집되는 현상은 스크롤 후에도 DOM에 10개만 매칭되기 때문입니다. 아래 scrapeGoogle 하나만 사용합니다.
    */
-  async scrapeGoogle(companyName, dateFilter = 'week', jobId = null, portalType = 'google', saveImmediately = false) {
-    let actualSavedCount = 0; // 실제 저장 성공 개수 추적
-    try {
-      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
-      
-      // 구글 여행 검색 페이지로 이동
-      const searchUrl = `https://www.google.com/travel/search?q=${encodeURIComponent(companyName)}`;
-      await this.page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 60000 });
-      await this.page.waitForTimeout(3000);
-      
-      // 리뷰 섹션으로 이동 (#reviews)
-      try {
-        const reviewsLink = this.page.locator('#reviews');
-        const reviewsLinkCount = await reviewsLink.count();
-        if (reviewsLinkCount > 0) {
-          await reviewsLink.first().scrollIntoViewIfNeeded();
-          await this.page.waitForTimeout(1000);
-          await reviewsLink.first().click({ timeout: 10000 });
-          await this.page.waitForTimeout(3000);
-        }
-      } catch (e) {
-        console.log('리뷰 섹션으로 이동 실패:', e.message);
-      }
-      
-      // 최신순 정렬 시도 (구글 리뷰는 기본적으로 최신순이지만 명시적으로 확인)
-      try {
-        // 정렬 드롭다운 또는 버튼 찾기
-        const sortSelectors = [
-          'button[aria-label*="Sort"]',
-          'button:has-text("Sort")',
-          'button:has-text("정렬")',
-          '[aria-label*="sort"]',
-          '[aria-label*="Sort"]',
-        ];
-        
-        for (const selector of sortSelectors) {
-          const sortButton = this.page.locator(selector);
-          const count = await sortButton.count();
-          if (count > 0) {
-            const isVisible = await sortButton.first().isVisible().catch(() => false);
-            if (isVisible) {
-              await sortButton.first().scrollIntoViewIfNeeded();
-              await this.page.waitForTimeout(500);
-              await sortButton.first().click({ timeout: 5000 });
-              await this.page.waitForTimeout(2000);
-              
-              // "Newest" 또는 "최신순" 옵션 선택
-              const newestOptions = [
-                'button:has-text("Newest")',
-                'button:has-text("최신순")',
-                '[aria-label*="Newest"]',
-                '[aria-label*="최신순"]',
-              ];
-              
-              for (const optionSelector of newestOptions) {
-                const option = this.page.locator(optionSelector);
-                const optionCount = await option.count();
-                if (optionCount > 0) {
-                  await option.first().click({ timeout: 3000 });
-                  await this.page.waitForTimeout(2000);
-                  console.log('최신순 정렬 선택 완료');
-                  break;
-                }
-              }
-              break;
-            }
-          }
-        }
-      } catch (e) {
-        console.log('최신순 정렬 선택 실패 (기본 정렬 사용):', e.message);
-      }
-      
-      // 무한 스크롤로 리뷰 로드
-      console.log('무한 스크롤로 리뷰 로드 중...');
-      
-      let lastReviewCount = 0;
-      let noChangeCount = 0;
-      const maxScrollAttempts = 50;
-      
-      // 리뷰 리스트 선택자
-      const reviewListSelector = '#reviews > c-wiz > c-wiz > div > div > div > div > div.v85cbc > c-wiz > div';
-      let reviewItems = this.page.locator(reviewListSelector);
-      lastReviewCount = await reviewItems.count();
-      
-      if (lastReviewCount === 0) {
-        console.log('⚠️ 리뷰를 찾을 수 없습니다.');
-        return [];
-      }
-      
-      console.log(`리뷰 선택자 발견: "${reviewListSelector}" (${lastReviewCount}개)`);
-      console.log(`초기 리뷰 개수: ${lastReviewCount}개`);
-      
-      // 스크롤하여 더 많은 리뷰 로드
-      for (let scrollAttempt = 0; scrollAttempt < maxScrollAttempts; scrollAttempt++) {
-        try {
-          // 마지막 리뷰 아이템으로 스크롤
-          const lastReviewItem = this.page.locator(`${reviewListSelector}:last-child`);
-          const lastItemCount = await lastReviewItem.count();
-          if (lastItemCount > 0) {
-            await lastReviewItem.scrollIntoViewIfNeeded();
-            await this.page.waitForTimeout(500);
-          }
-          
-          // JavaScript로 점진적 스크롤
-          await this.page.evaluate(() => {
-            const scrollHeight = document.documentElement.scrollHeight;
-            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-            const windowHeight = window.innerHeight;
-            
-            window.scrollTo({
-              top: currentScroll + windowHeight * 0.8,
-              behavior: 'smooth'
-            });
-          });
-          await this.page.waitForTimeout(1000);
-          
-          // 페이지 하단으로 완전히 스크롤
-          await this.page.evaluate(() => {
-            window.scrollTo(0, document.body.scrollHeight);
-          });
-          await this.page.waitForTimeout(1000);
-          
-          // End 키로 페이지 하단으로 스크롤
-          await this.page.keyboard.press('End');
-          await this.page.waitForTimeout(1000);
-          
-          // 스크롤 이벤트 트리거
-          await this.page.evaluate(() => {
-            window.dispatchEvent(new Event('scroll'));
-            window.dispatchEvent(new Event('scrollend'));
-          });
-          await this.page.waitForTimeout(1000);
-          
-        } catch (scrollError) {
-          // 스크롤 에러는 무시하고 계속 진행
-        }
-        
-        // 리뷰 로딩 대기
-        await this.page.waitForTimeout(2000); // 대기 시간 감소
-        
-        // 리뷰 개수 재확인
-        reviewItems = this.page.locator(reviewListSelector);
-        const currentCount = await reviewItems.count();
-        
-        if (currentCount > lastReviewCount) {
-          console.log(`스크롤 (${scrollAttempt + 1}번째) - 리뷰: ${lastReviewCount}개 → ${currentCount}개 ✅`);
-          lastReviewCount = currentCount;
-          noChangeCount = 0;
-        } else {
-          noChangeCount++;
-          if (noChangeCount >= 5) {
-            console.log(`리뷰 개수가 ${noChangeCount}번 연속 변하지 않아 스크롤을 중단합니다.`);
-            break;
-          }
-        }
-      }
-      
-      // 최종 리뷰 개수 확인
-      reviewItems = this.page.locator(reviewListSelector);
-      const reviewCount = await reviewItems.count();
-      console.log(`최종 리뷰 개수: ${reviewCount}개`);
-      
-      // 리뷰 데이터 추출
-      const reviews = [];
-      for (let i = 0; i < reviewCount; i++) {
-        try {
-          // 각 리뷰 아이템
-          const reviewItem = this.page.locator(`${reviewListSelector}:nth-child(${i + 1})`);
-          
-          // rating 추출
-          let rating = 0;
-          try {
-            const ratingElement = reviewItem.locator('div > div > div > div > div.aAs4ib > div.GDWaad');
-            const ratingText = await ratingElement.first().textContent().catch(() => '');
-            if (ratingText) {
-              const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
-              if (ratingMatch) {
-                rating = parseFloat(ratingMatch[1]);
-              }
-            }
-          } catch (e) {
-            // rating 추출 실패
-          }
-          
-          // nickname 추출
-          let nickname = '';
-          try {
-            const nicknameElement = reviewItem.locator('div > div > div > div > div.aAs4ib > div.jUkSGf.WwUTAf > span > a');
-            nickname = await nicknameElement.first().textContent().catch(() => '');
-            if (nickname) {
-              nickname = nickname.trim();
-            }
-          } catch (e) {
-            // nickname 추출 실패
-          }
-          
-          // visit_type 추출
-          let visitType = '';
-          try {
-            const visitTypeElement = reviewItem.locator('div > div > div > div > div:nth-child(2) > div.ThUm5b > span');
-            visitType = await visitTypeElement.first().textContent().catch(() => '');
-            if (visitType) {
-              visitType = visitType.trim();
-            }
-          } catch (e) {
-            // visit_type 추출 실패
-          }
-          
-          // content 추출 (제공된 정보 기반)
-          // 구조:
-          // - 접힌 본문: div[jsname="kmPxT"] 안에 … + Read more 버튼
-          // - 펼친 본문: div[jsname="NwoMSd"] 안에 전체 텍스트 (이미 DOM에 존재)
-          // 핵심: 클릭 없이 div[jsname="NwoMSd"] span에서 전체 텍스트를 읽을 수 있음
-          let content = '';
-          
-          try {
-            // 1단계: 클릭 없이 div[jsname="NwoMSd"]에서 전체 텍스트 읽기 시도 (가장 안정적)
-            // Playwright는 숨겨진 요소도 textContent()로 읽을 수 있음
-            const fullTextSelectors = [
-              'div[jsname="NwoMSd"] span',
-              'div[jsname="NwoMSd"] div.STQFb.eoY5cb div.K7oBsc span',
-              'div[jsname="NwoMSd"] div.STQFb.eoY5cb span',
-            ];
-            
-            console.log(`[디버깅] 리뷰 ${i + 1} content 추출 시작 - div[jsname="NwoMSd"] 찾기 시도`);
-            
-            for (const fullTextSelector of fullTextSelectors) {
-              try {
-                const fullTextElement = reviewItem.locator(fullTextSelector);
-                const count = await fullTextElement.count();
-                console.log(`[디버깅] 리뷰 ${i + 1} 선택자 "${fullTextSelector}" 검색 결과: ${count}개 발견`);
-                
-                if (count > 0) {
-                  // textContent()로 숨겨진 요소도 읽기
-                  const textContents = await fullTextElement.allTextContents().catch(() => []);
-                  if (textContents && textContents.length > 0) {
-                    content = textContents.join('\n').trim();
-                  } else {
-                    content = await fullTextElement.first().textContent().catch(() => '') || '';
-                  }
-                  
-                  console.log(`[디버깅] 리뷰 ${i + 1} 선택자 "${fullTextSelector}"에서 추출한 content 길이: ${content ? content.length : 0}`);
-                  
-                  if (content && content.trim().length > 0) {
-                    content = content.trim();
-                    // "Read more", "더보기" 텍스트 제거
-                    content = content.replace(/Read more/gi, '').replace(/더보기/g, '').replace(/더 보기/g, '').trim();
-                    
-                    if (content.length > 0) {
-                      console.log(`[디버깅] 리뷰 ${i + 1} content 추출 성공 (클릭 없이, 선택자: ${fullTextSelector}, 길이: ${content.length})`);
-                      if (content.length < 200) {
-                        console.log(`[디버깅] 리뷰 ${i + 1} content 미리보기: "${content}"`);
-                      }
-                      break;
-                    }
-                  }
-                }
-              } catch (e) {
-                console.log(`[디버깅] 리뷰 ${i + 1} 선택자 "${fullTextSelector}" 에러:`, e.message);
-                continue;
-              }
-            }
-            
-            // 2단계: 전체 텍스트를 찾지 못했거나 너무 짧은 경우, Read more 버튼 클릭 시도
-            if (!content || content.length < 50) {
-              // 접힌 본문 확인 (div[jsname="kmPxT"])
-              const foldedContent = await reviewItem.locator('div[jsname="kmPxT"] span').textContent().catch(() => '') || '';
-              const hasReadMoreButton = foldedContent && (
-                foldedContent.includes('Read more') || 
-                foldedContent.includes('더보기') ||
-                foldedContent.endsWith('...') ||
-                foldedContent.endsWith('…')
-              );
-              
-              if (hasReadMoreButton && i < 10) {
-                console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 필요 (접힌 본문 길이: ${foldedContent.length})`);
-              }
-              
-              // Read more 버튼 찾기 및 클릭 (리뷰 컨테이너 내부에서)
-              // 가장 정확한 선택자: span[jsname="kDNJsb"][role="button"]
-              const readMoreButtonSelectors = [
-                'span[jsname="kDNJsb"][role="button"]',  // 가장 정확한 선택자
-                'span.Jmi7d.TJUuge[jsname="kDNJsb"][role="button"]',
-                'span[role="button"][jsname="kDNJsb"]',
-              ];
-              
-              let buttonClicked = false;
-              for (const buttonSelector of readMoreButtonSelectors) {
-                try {
-                  const readMoreButton = reviewItem.locator(buttonSelector);
-                  const buttonCount = await readMoreButton.count();
-                  
-                  if (buttonCount > 0) {
-                    const isVisible = await readMoreButton.first().isVisible({ timeout: 1000 }).catch(() => false);
-                    if (isVisible) {
-                      const buttonText = await readMoreButton.first().textContent().catch(() => '') || '';
-                      const buttonTextLower = buttonText.toLowerCase().trim();
-                      
-                      // "Read more", "더보기" 확인
-                      const isReadMore = 
-                        buttonTextLower.includes('read more') || 
-                        buttonTextLower.includes('readmore') ||
-                        buttonText.includes('더보기') ||
-                        buttonText.includes('더 보기');
-                      
-                      if (isReadMore) {
-                        if (i < 10) {
-                          console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 발견: "${buttonText}"`);
-                        }
-                        
-                        // 스크롤 후 클릭
-                        await readMoreButton.first().scrollIntoViewIfNeeded();
-                        await this.page.waitForTimeout(300);
-                        
-                        try {
-                          await readMoreButton.first().click({ timeout: 2000 });
-                          buttonClicked = true;
-                          if (i < 10) {
-                            console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 클릭 성공 (Playwright)`);
-                          }
-                          // 클릭 후 content가 나타날 때까지 대기
-                          await this.page.waitForTimeout(1200);
-                          
-                          // 클릭 후 다시 div[jsname="NwoMSd"]에서 읽기
-                          for (const fullTextSelector of fullTextSelectors) {
-                            try {
-                              const fullTextElement = reviewItem.locator(fullTextSelector);
-                              const count = await fullTextElement.count();
-                              if (count > 0) {
-                                const textContents = await fullTextElement.allTextContents().catch(() => []);
-                                if (textContents && textContents.length > 0) {
-                                  content = textContents.join('\n').trim();
-                                } else {
-                                  content = await fullTextElement.first().textContent().catch(() => '') || '';
-                                }
-                                
-                                if (content && content.trim().length > 0) {
-                                  content = content.trim();
-                                  content = content.replace(/Read more/gi, '').replace(/더보기/g, '').replace(/더 보기/g, '').trim();
-                                  
-                                  if (content.length > 0) {
-                                    if (i < 10) {
-                                      console.log(`[디버깅] 리뷰 ${i + 1} content 추출 성공 (클릭 후, 선택자: ${fullTextSelector}, 길이: ${content.length})`);
-                                    }
-                                    break;
-                                  }
-                                }
-                              }
-                            } catch (e) {
-                              continue;
-                            }
-                          }
-                          
-                          break;
-                        } catch (clickError) {
-                          if (i < 10) {
-                            console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 클릭 실패 (Playwright):`, clickError.message);
-                          }
-                          
-                          // JavaScript로 클릭 시도
-                          try {
-                            const clicked = await reviewItem.evaluate((selector) => {
-                              const button = document.querySelector(selector);
-                              if (button) {
-                                const text = (button.textContent || '').trim();
-                                const textLower = text.toLowerCase();
-                                if (textLower.includes('read more') || textLower.includes('readmore') || text.includes('더보기') || text.includes('더 보기')) {
-                                  button.click();
-                                  return true;
-                                }
-                              }
-                              return false;
-                            }, buttonSelector);
-                            
-                            if (clicked) {
-                              buttonClicked = true;
-                              if (i < 10) {
-                                console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 클릭 성공 (JavaScript)`);
-                              }
-                              await this.page.waitForTimeout(1200);
-                              
-                              // 클릭 후 다시 읽기
-                              for (const fullTextSelector of fullTextSelectors) {
-                                try {
-                                  const fullTextElement = reviewItem.locator(fullTextSelector);
-                                  const count = await fullTextElement.count();
-                                  if (count > 0) {
-                                    const textContents = await fullTextElement.allTextContents().catch(() => []);
-                                    if (textContents && textContents.length > 0) {
-                                      content = textContents.join('\n').trim();
-                                    } else {
-                                      content = await fullTextElement.first().textContent().catch(() => '') || '';
-                                    }
-                                    
-                                    if (content && content.trim().length > 0) {
-                                      content = content.trim();
-                                      content = content.replace(/Read more/gi, '').replace(/더보기/g, '').replace(/더 보기/g, '').trim();
-                                      
-                                      if (content.length > 0) {
-                                        break;
-                                      }
-                                    }
-                                  }
-                                } catch (e) {
-                                  continue;
-                                }
-                              }
-                              
-                              break;
-                            }
-                          } catch (jsError) {
-                            if (i < 10) {
-                              console.log(`[디버깅] 리뷰 ${i + 1} Read more 버튼 클릭 실패 (JavaScript):`, jsError.message);
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  continue;
-                }
-              }
-            }
-            
-            // 3단계: fallback - 다른 선택자로 시도
-            if (!content || content.length === 0) {
-              const fallbackSelectors = [
-                'div.kVathc.eoY5cb > div:nth-child(2) > div',
-                'div[jsname="NwoMSd"]',
-                'div.STQFb.eoY5cb div.K7oBsc span',
-                'div.STQFb.eoY5cb span',
-              ];
-              
-              for (const fallbackSelector of fallbackSelectors) {
-                try {
-                  const fallbackElement = reviewItem.locator(fallbackSelector);
-                  const count = await fallbackElement.count();
-                  if (count > 0) {
-                    const textContents = await fallbackElement.allTextContents().catch(() => []);
-                    if (textContents && textContents.length > 0) {
-                      content = textContents.join('\n').trim();
-                    } else {
-                      content = await fallbackElement.first().textContent().catch(() => '') || '';
-                    }
-                    
-                    if (content && content.trim().length > 0) {
-                      content = content.trim();
-                      content = content.replace(/Read more/gi, '').replace(/더보기/g, '').replace(/더 보기/g, '').trim();
-                      
-                      if (content.length > 0) {
-                        if (i < 10) {
-                          console.log(`[디버깅] 리뷰 ${i + 1} content 추출 성공 (fallback, 선택자: ${fallbackSelector}, 길이: ${content.length})`);
-                        }
-                        break;
-                      }
-                    }
-                  }
-                } catch (e) {
-                  continue;
-                }
-              }
-            }
-            
-            if (!content || content.length === 0) {
-              if (i < 10) {
-                console.log(`[디버깅] 리뷰 ${i + 1} content 추출 최종 실패`);
-              }
-            } else if (i < 10) {
-              console.log(`[디버깅] 리뷰 ${i + 1} content 최종 추출 성공 (길이: ${content.length})`);
-            }
-          } catch (e) {
-            console.log(`[디버깅] 리뷰 ${i + 1} content 추출 실패:`, e.message);
-          }
-          
-          // visit_keyword 추출 (read more 클릭 후에도 추출 가능)
-          // 제공된 HTML: visit_keyword는 <div class="X4nL7d"><div><div class="dA5Vzb"><span class="uTU5Ac">Service</span><span>4.0</span></div>...</div></div> 안에 있음
-          let visitKeyword = '';
-          try {
-            const visitKeywordSelectors = [
-              // 정확한 선택자 (제공된 HTML 기반 - read more 클릭 후)
-              'div[jsname="NwoMSd"] div.X4nL7d',
-              'div.STQFb.eoY5cb div.X4nL7d',
-              // 일반적인 선택자
-              'div.kVathc.eoY5cb div.X4nL7d',
-              'div.kVathc.eoY5cb > div:nth-child(2) > div > div.X4nL7d',
-              'div > div > div > div > div.v85cbc > c-wiz > div:nth-child(1) > div > div > div:nth-child(3) > div:nth-child(2) > div.kVathc.eoY5cb > div:nth-child(2) > div > div.X4nL7d',
-              // read more 클릭 후 경로에서도 시도 (reviewItem 내에서 상대 경로)
-              'div:nth-child(6) > div:nth-child(2) > div.kVathc.eoY5cb > div:nth-child(2) > div > div.X4nL7d',
-              'div.kVathc.eoY5cb > div:nth-child(2) > div > div > div.X4nL7d',
-              'div.X4nL7d',
-            ];
-            
-            for (const selector of visitKeywordSelectors) {
-              try {
-                const visitKeywordElement = reviewItem.locator(selector);
-                const count = await visitKeywordElement.count();
-                if (count > 0) {
-                  visitKeyword = await visitKeywordElement.first().textContent().catch(() => '');
-                  if (visitKeyword) {
-                    visitKeyword = visitKeyword.trim();
-                    if (visitKeyword.length > 0) {
-                      if (i < 5) {
-                        console.log(`[디버깅] 리뷰 ${i + 1} visit_keyword 추출 성공: "${visitKeyword}"`);
-                      }
-                      break;
-                    }
-                  }
-                }
-              } catch (e) {
-                // 다음 선택자 시도
-                continue;
-              }
-            }
-          } catch (e) {
-            console.log(`[디버깅] 리뷰 ${i + 1} visit_keyword 추출 실패:`, e.message);
-          }
-          
-          // review_date 추출 (날짜 타입이 아님)
-          let reviewDate = null;
-          let date = null;
-          try {
-            // 여러 날짜 선택자 시도
-            const dateSelectors = [
-              'div > div:nth-child(6) > div:nth-child(6) > div.aAs4ib > div.jUkSGf.WwUTAf > span > span',
-              'div.jUkSGf.WwUTAf > span > span',
-              'div.aAs4ib > div.jUkSGf > span > span',
-              'span:has-text("전에 Google에서 작성")',
-              'span:has-text("주 전")',
-              'span:has-text("개월 전")',
-            ];
-            
-            let dateText = '';
-            for (const selector of dateSelectors) {
-              const dateElement = reviewItem.locator(selector);
-              const count = await dateElement.count();
-              if (count > 0) {
-                dateText = await dateElement.first().textContent().catch(() => '');
-                if (dateText && dateText.trim()) {
-                  break;
-                }
-              }
-            }
-            
-            if (dateText) {
-              const trimmedDateText = dateText.trim();
-              console.log(`[디버깅] 리뷰 ${i + 1} 날짜 텍스트: "${trimmedDateText}"`);
-              
-              // 상대적 날짜 파싱 (예: "1주 전", "1개월 전", "정확히 1주 전에 Google에서 작성")
-              const relativeDatePatterns = [
-                /정확히\s*(\d+)\s*주\s*전/,
-                /(\d+)\s*주\s*전/,
-                /(\d+)\s*개월\s*전/,
-                /(\d+)\s*일\s*전/,
-                /(\d+)\s*년\s*전/,
-              ];
-              
-              let daysAgo = 0;
-              let matched = false;
-              for (const pattern of relativeDatePatterns) {
-                const match = trimmedDateText.match(pattern);
-                if (match) {
-                  matched = true;
-                  const value = parseInt(match[1]);
-                  if (pattern.source.includes('주')) {
-                    daysAgo = value * 7;
-                  } else if (pattern.source.includes('개월')) {
-                    daysAgo = value * 30; // 대략적으로
-                  } else if (pattern.source.includes('일')) {
-                    daysAgo = value;
-                  } else if (pattern.source.includes('년')) {
-                    daysAgo = value * 365;
-                  }
-                  
-                  if (daysAgo > 0) {
-                    const today = new Date();
-                    const reviewDateObj = new Date(today);
-                    reviewDateObj.setDate(today.getDate() - daysAgo);
-                    date = reviewDateObj.toISOString().split('T')[0];
-                    reviewDate = reviewDateObj;
-                    console.log(`[디버깅] 리뷰 ${i + 1} 상대적 날짜 파싱 성공: "${trimmedDateText}" → ${date} (${daysAgo}일 전)`);
-                    break;
-                  }
-                }
-              }
-              
-              // 패턴 매칭이 안 된 경우에도 텍스트에 포함된 키워드로 확인
-              if (!matched && !date) {
-                if (trimmedDateText.includes('주 전') || trimmedDateText.includes('주전')) {
-                  const weekMatch = trimmedDateText.match(/(\d+)\s*주/);
-                  if (weekMatch) {
-                    daysAgo = parseInt(weekMatch[1]) * 7;
-                    const today = new Date();
-                    const reviewDateObj = new Date(today);
-                    reviewDateObj.setDate(today.getDate() - daysAgo);
-                    date = reviewDateObj.toISOString().split('T')[0];
-                    reviewDate = reviewDateObj;
-                    console.log(`[디버깅] 리뷰 ${i + 1} 상대적 날짜 파싱 성공 (키워드): "${trimmedDateText}" → ${date} (${daysAgo}일 전)`);
-                  }
-                } else if (trimmedDateText.includes('개월 전') || trimmedDateText.includes('개월전')) {
-                  const monthMatch = trimmedDateText.match(/(\d+)\s*개월/);
-                  if (monthMatch) {
-                    daysAgo = parseInt(monthMatch[1]) * 30;
-                    const today = new Date();
-                    const reviewDateObj = new Date(today);
-                    reviewDateObj.setDate(today.getDate() - daysAgo);
-                    date = reviewDateObj.toISOString().split('T')[0];
-                    reviewDate = reviewDateObj;
-                    console.log(`[디버깅] 리뷰 ${i + 1} 상대적 날짜 파싱 성공 (키워드): "${trimmedDateText}" → ${date} (${daysAgo}일 전)`);
-                  }
-                }
-              }
-              
-              // 상대적 날짜 파싱이 실패한 경우 절대 날짜 파싱 시도
-              if (!date) {
-                const datePatterns = [
-                  /(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/,
-                  /(\d{2})\.(\d{1,2})\.(\d{1,2})/,
-                  /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
-                ];
-                
-                for (const pattern of datePatterns) {
-                  const dateMatch = trimmedDateText.match(pattern);
-                  if (dateMatch) {
-                    let year, month, day;
-                    
-                    if (dateMatch[1].length === 4) {
-                      year = dateMatch[1];
-                      month = dateMatch[2].padStart(2, '0');
-                      day = dateMatch[3].padStart(2, '0');
-                    } else if (dateMatch[3].length === 4) {
-                      year = dateMatch[3];
-                      month = dateMatch[1].padStart(2, '0');
-                      day = dateMatch[2].padStart(2, '0');
-                    } else {
-                      year = parseInt(dateMatch[1]) < 50 ? `20${dateMatch[1]}` : `19${dateMatch[1]}`;
-                      month = dateMatch[2].padStart(2, '0');
-                      day = dateMatch[3].padStart(2, '0');
-                    }
-                    
-                    date = `${year}-${month}-${day}`;
-                    reviewDate = new Date(date);
-                    console.log(`[디버깅] 리뷰 ${i + 1} 절대 날짜 파싱 성공: "${trimmedDateText}" → ${date}`);
-                    break;
-                  }
-                }
-              }
-              
-              // 날짜 파싱 실패 시 로그 출력
-              if (!date) {
-                console.log(`[디버깅] 리뷰 ${i + 1} 날짜 파싱 실패: "${trimmedDateText}"`);
-              }
-            }
-          } catch (e) {
-            console.log(`[디버깅] 리뷰 ${i + 1} 날짜 추출 실패:`, e.message);
-          }
-          
-          // 날짜가 없으면 리뷰를 건너뜀 (오늘 날짜 사용하지 않음)
-          if (!date) {
-            console.log(`[디버깅] 리뷰 ${i + 1} 날짜가 없어 건너뜀`);
-            continue;
-          }
-          
-          // 날짜 필터링
-          if (dateFilter === 'week') {
-            const today = new Date();
-            const oneWeekAgo = new Date(today);
-            oneWeekAgo.setDate(today.getDate() - 7);
-            if (reviewDate && reviewDate < oneWeekAgo) {
-              continue;
-            }
-          }
-          
-          // emotion은 없음
-          const emotion = null;
-          
-          // review_keyword는 없음
-          const keywords = [];
-          
-          // 리뷰 데이터가 유효한지 확인
-          if (content.trim().length > 10 || rating > 0 || (nickname && nickname.trim().length > 0)) {
-            const reviewData = {
-              content: content.trim() || '',
-              nickname: nickname || `사용자${i + 1}`,
-              rating: rating,
-              visitType: visitType || '',
-              emotion: emotion,
-              reviewKeyword: keywords,
-              visitKeyword: visitKeyword || '',
-              reviewDate: date,
-              revisitFlag: false,
-            };
-            
-            // 즉시 저장 방식이 활성화된 경우 즉시 저장
-            if (saveImmediately && companyName && date) {
-              try {
-                // 날짜 필터링 확인
-                let shouldSave = true;
-                if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
-                  const today = new Date();
-                  const filterDate = new Date(today);
-                  filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
-                  if (reviewDate < filterDate) {
-                    shouldSave = false;
-                  }
-                }
-                
-                if (shouldSave) {
-                  const analysis = this.analyzeText(
-                    reviewData.content,
-                    rating,
-                    reviewData.visitKeyword,
-                    Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword
-                  );
-                  
-                  const saved = await this.saveReview({
-                    portalUrl: '구글',
-                    companyName,
-                    reviewDate: date,
-                    content: reviewData.content,
-                    rating: rating || null,
-                    nickname: reviewData.nickname,
-                    visitKeyword: reviewData.visitKeyword || null,
-                    reviewKeyword: Array.isArray(reviewData.reviewKeyword) ? reviewData.reviewKeyword.join(', ') : reviewData.reviewKeyword || null,
-                    visitType: reviewData.visitType || null,
-                    emotion: reviewData.emotion || null,
-                    revisitFlag: reviewData.revisitFlag || false,
-                    nRating: analysis.nRating,
-                    nEmotion: analysis.nEmotion,
-                    nCharCount: analysis.nCharCount,
-                    title: null,
-                    additionalInfo: null,
-                  });
-                  
-                  if (saved) {
-                    actualSavedCount++;
-                    reviews.push(reviewData);
-                    if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
-                      console.log(`✅ [구글 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
-                    }
-                  } else {
-                    reviews.push(reviewData);
-                  }
-                } else {
-                  reviews.push(reviewData);
-                }
-              } catch (saveError) {
-                console.error(`[구글] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
-                reviews.push(reviewData);
-              }
-            } else {
-              // 기존 방식: 배열에 추가만 함
-              reviews.push(reviewData);
-            }
-          }
-        } catch (error) {
-          console.log(`리뷰 ${i + 1} 추출 실패:`, error.message);
-        }
-      }
-      
-      console.log(`구글 여행 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
-      if (saveImmediately) {
-        console.log(`[구글] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);
-        reviews._actualSavedCount = actualSavedCount;
-      }
-      return reviews;
-      
-    } catch (error) {
-      console.error('구글 여행 스크래핑 실패:', error);
-      return [];
-    }
-  }
 
   /**
    * 트립어드바이저 스크래핑 (예시)
@@ -4758,13 +4181,16 @@ class ScraperService {
    */
   async scrapeGoogle(companyName, dateFilter = 'week', jobId = null, portalType = 'google', saveImmediately = false) {
     let actualSavedCount = 0; // 실제 저장 성공 개수 추적
+    const effectiveDateFilter = (dateFilter == null || dateFilter === '') ? 'all' : dateFilter;
     try {
-      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
+      console.log(`구글 여행 스크래핑 시작: "${companyName}" 검색 (필터: ${effectiveDateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
       
-      // 구글 여행 검색 페이지로 이동
+      // 구글 여행 검색 페이지로 이동 (기업 전환 시에도 완전 로드되도록 대기)
       const searchUrl = `https://www.google.com/travel/search?q=${encodeURIComponent(companyName)}`;
       await this.page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await this.page.waitForTimeout(2000);
+      await this.page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {});
+      await this.page.waitForTimeout(1500);
       
       // 리뷰 섹션으로 이동 (컨테이너 안의 #reviews 클릭)
       try {
@@ -4810,8 +4236,8 @@ class ScraperService {
         console.log('리뷰 섹션 클릭 실패:', e.message);
       }
       
-      // 리뷰 섹션으로 이동한 후 충분한 대기 시간 (한글 리뷰 로드 대기)
-      await this.page.waitForTimeout(3000);
+      // 리뷰 섹션으로 이동한 후 충분한 대기 (기업 전환 후 두 번째 기업도 리뷰 목록이 로드되도록)
+      await this.page.waitForTimeout(4000);
       
       // 최신순 필터 클릭 전에 초기 로드된 리뷰 확인
       let initialReviewItems = this.page.locator('#reviews div.Svr5cf.bKhjM');
@@ -4848,48 +4274,66 @@ class ScraperService {
         }
       }
       
-      // 최신순 필터 클릭
+      // 최신순 필터: 1) 정렬 드롭다운 클릭 → 2) 메뉴에서 "최신순" 항목 클릭
       try {
-        // 여러 선택자 시도
-        const sortFilterSelectors = [
+        const sortDropdownSelectors = [
           '#reviews > c-wiz > c-wiz > div > div > div > div > div:nth-child(3) > div > div.qtSVMc.oU1sdf > span:nth-child(1) > span > div.jgvuAb.rRDaU.xnu6rd.QGRmIf.yJkB0b.THFy7d.XXyf0.iWO5td > div.OA0qNb.ncFHed > div.MocG8c.o7IkCf.LMgvRb.KKjvXb',
           'div.qtSVMc.oU1sdf span:nth-child(1) div.MocG8c',
           'div.MocG8c.o7IkCf.LMgvRb.KKjvXb',
           'div[class*="MocG8c"]',
         ];
-        
-        let sortFilterClicked = false;
-        for (const selector of sortFilterSelectors) {
+
+        let dropdownOpened = false;
+        for (const selector of sortDropdownSelectors) {
           try {
             const sortFilter = this.page.locator(selector);
-            const sortFilterCount = await sortFilter.count();
-            if (sortFilterCount > 0) {
-              const isVisible = await sortFilter.first().isVisible({ timeout: 2000 }).catch(() => false);
-              if (isVisible) {
-                await sortFilter.first().scrollIntoViewIfNeeded();
-                await this.page.waitForTimeout(500);
-                await sortFilter.first().click({ timeout: 5000 }).catch(() => {});
-                await this.page.waitForTimeout(2000);
-                console.log('최신순 필터 클릭 완료');
-                sortFilterClicked = true;
+            const count = await sortFilter.count();
+            if (count > 0 && (await sortFilter.first().isVisible({ timeout: 1500 }).catch(() => false))) {
+              await sortFilter.first().scrollIntoViewIfNeeded();
+              await this.page.waitForTimeout(400);
+              await sortFilter.first().click({ timeout: 5000 }).catch(() => {});
+              await this.page.waitForTimeout(1200);
+              dropdownOpened = true;
+              console.log('정렬 드롭다운 열림');
+              break;
+            }
+          } catch (e) {}
+        }
+
+        if (dropdownOpened) {
+          // 메뉴에서 "최신순" / "Newest" / "Most recent" / "최신" 항목 클릭 (한국어·영어 UI 모두)
+          const newestOptionSelectors = [
+            () => this.page.getByRole('option', { name: /최신순|Newest|최신|most recent/i }),
+            () => this.page.locator('div[role="option"]').filter({ hasText: /최신순|Newest|최신|most recent/i }).first(),
+            () => this.page.locator('div.MocG8c').filter({ hasText: /최신순|Newest|최신|most recent/i }).first(),
+            () => this.page.getByText(/최신순|Newest|최신|most recent/i, { exact: false }).first(),
+          ];
+          let optionClicked = false;
+          for (const getLocator of newestOptionSelectors) {
+            try {
+              const opt = getLocator();
+              const n = await opt.count().catch(() => 0);
+              if (n > 0 && (await opt.isVisible({ timeout: 800 }).catch(() => false))) {
+                await opt.click({ timeout: 3000 }).catch(() => {});
+                await this.page.waitForTimeout(1500);
+                console.log('최신순 필터 선택 완료');
+                optionClicked = true;
                 break;
               }
-            }
-          } catch (e) {
-            // 다음 선택자 시도
+            } catch (e) {}
           }
-        }
-        
-        if (!sortFilterClicked) {
-          console.log('최신순 필터를 찾을 수 없습니다 (계속 진행)');
+          if (!optionClicked) {
+            console.log('최신순 메뉴 항목을 찾지 못함 (드롭다운만 열림). 기본 정렬로 진행.');
+          }
+        } else {
+          console.log('정렬 드롭다운을 찾을 수 없습니다 (계속 진행)');
         }
       } catch (e) {
-        // 최신순 필터 클릭 실패해도 계속 진행
         console.log('최신순 필터 클릭 실패:', e.message);
       }
       
-      // 최신순 필터 클릭 후 리뷰 로드 대기
-      await this.page.waitForTimeout(3000);
+      // 최신순 필터 클릭 후 리뷰 로드 대기 (두 번째 기업부터 로딩이 늦을 수 있음)
+      await this.page.waitForTimeout(4000);
       
       // 구글 트래블 리뷰 "반복 단위" (사용자 제공)
       // 이 단위가 가장 안정적이며, UI 요소가 섞이는 문제를 크게 줄인다.
@@ -4899,6 +4343,18 @@ class ScraperService {
       if (lastReviewCount === 0) {
         console.log('⚠️ 리뷰를 찾을 수 없습니다.');
         return [];
+      }
+      
+      // 초기 10개 이하면 추가 로딩 대기 (두 번째 기업 등에서 목록이 늦게 뜰 수 있음)
+      if (lastReviewCount <= 10) {
+        console.log(`[구글] 초기 리뷰 ${lastReviewCount}개 → 3초 추가 대기 후 재확인`);
+        await this.page.waitForTimeout(3000);
+        reviewItems = this.page.locator('#reviews div.Svr5cf.bKhjM');
+        const recheckCount = await reviewItems.count().catch(() => 0);
+        if (recheckCount > lastReviewCount) {
+          console.log(`[구글] 재확인 후 리뷰 ${lastReviewCount}개 → ${recheckCount}개`);
+          lastReviewCount = recheckCount;
+        }
       }
       
       console.log(`초기 리뷰 개수(선택자 기준): ${lastReviewCount}개`);
@@ -4942,105 +4398,170 @@ class ScraperService {
         }
       }
       
-      // 무한 스크롤로 리뷰 로드
+      // 무한 스크롤: 실제 리뷰 목록이 있는 스크롤 컨테이너를 찾아 조금씩 내리고, 새 리뷰 수집
+      const reviewListSelector = '#reviews div.Svr5cf.bKhjM';
       let noChangeCount = 0;
-      const maxScrollAttempts = 60; // 스크롤 횟수 증가 (리뷰 더 로드)
-      
-      for (let scrollAttempt = 0; scrollAttempt < maxScrollAttempts; scrollAttempt++) {
+      let lastScrollTop = -1;
+      let scrollStuckCount = 0;
+      const maxScrollAttempts = 60;
+      const minScrollBeforeExit = 20;
+      const unchangedLimit = 12;
+      const scrollStuckLimit = 6;
+      console.log('[구글] 리뷰 목록 스크롤하여 추가 로드 중...');
+      const reviews = [];
+      const seenKeys = new Set();
+      // 일주일/2주 선택 시에만: 최신순이므로 기준일 이전 리뷰를 만나면 그 시점에서 수집 종료. '전체'일 때는 사용 안 함
+      let dateFilterStopRequested = false;
+
+      for (let scrollAttempt = 0; scrollAttempt < maxScrollAttempts && !dateFilterStopRequested; scrollAttempt++) {
+        // try 안에서 예외 시에도 루프 끝에서 scrollResult 참조하므로 루프 스코프에 기본값 선언
+        let scrollResult = { scrollTop: 0, maxScroll: 0, scrolled: false, scrollHeight: 0, clientHeight: 0 };
         try {
-          // 리뷰 섹션 컨테이너 찾기
-          const reviewsContainer = this.page.locator('#reviews');
-          const containerCount = await reviewsContainer.count();
-          
-          // 마지막 리뷰 아이템으로 스크롤
-          const currentCountBeforeScroll = await reviewItems.count().catch(() => 0);
-          if (currentCountBeforeScroll > 0) {
-            const lastReviewItem = reviewItems.nth(currentCountBeforeScroll - 1);
-            await lastReviewItem.scrollIntoViewIfNeeded().catch(() => {});
+          // 1) scrollHeight가 가장 큰 컨테이너를 찾아 조금씩 아래로 스크롤
+          scrollResult = await this.page.evaluate((stepPx) => {
+            const el = (() => {
+              const section = document.querySelector('#reviews');
+              if (!section) return null;
+              let best = null;
+              let bestSh = 0;
+              function check(node) {
+                if (!node || node.nodeType !== 1) return;
+                if (node.scrollHeight > node.clientHeight && node.scrollHeight > bestSh) {
+                  bestSh = node.scrollHeight;
+                  best = node;
+                }
+              }
+              check(section);
+              const first = section.querySelector('div.Svr5cf, div.Svr5cf.bKhjM');
+              if (first) {
+                let p = first.parentElement;
+                while (p && p !== document.body) {
+                  check(p);
+                  p = p.parentElement;
+                }
+              }
+              return best;
+            })();
+            if (!el) return { scrollTop: 0, maxScroll: 0, scrolled: false, scrollHeight: 0, clientHeight: 0 };
+            const maxScroll = el.scrollHeight - el.clientHeight;
+            const prevTop = el.scrollTop;
+            el.scrollTop = Math.min(el.scrollTop + stepPx, el.scrollHeight);
+            el.dispatchEvent(new Event('scroll', { bubbles: true }));
+            return {
+              scrollTop: el.scrollTop,
+              maxScroll,
+              scrolled: el.scrollTop !== prevTop,
+              scrollHeight: el.scrollHeight,
+              clientHeight: el.clientHeight,
+            };
+          }, 550);
+          // maxScroll > 0일 때만 '스크롤 멈춤'으로 봄. maxScroll=0이면 컨테이너가 스크롤 불가라 창 스크롤 fallback 사용 중
+          if (scrollResult.maxScroll > 0 && !scrollResult.scrolled) {
+            scrollStuckCount++;
+          } else {
+            scrollStuckCount = 0;
+          }
+          lastScrollTop = scrollResult.scrollTop;
+          await this.page.waitForTimeout(900);
+
+          // 2) 리뷰 영역에서 마우스 휠로 아래로 (lazy load 트리거)
+          try {
+            const box = await this.page.locator('#reviews').first().boundingBox().catch(() => null);
+            if (box) {
+              await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+              for (let w = 0; w < 3; w++) {
+                await this.page.mouse.wheel(0, 350);
+                await this.page.waitForTimeout(550);
+              }
+            }
+          } catch (_) {}
+
+          // 3) 같은 컨테이너 한 번 더 내리기
+          await this.page.evaluate((stepPx) => {
+            const section = document.querySelector('#reviews');
+            if (!section) return;
+            let best = null;
+            let bestSh = 0;
+            function check(node) {
+              if (!node || node.nodeType !== 1) return;
+              if (node.scrollHeight > node.clientHeight && node.scrollHeight > bestSh) {
+                bestSh = node.scrollHeight;
+                best = node;
+              }
+            }
+            check(section);
+            const first = section.querySelector('div.Svr5cf, div.Svr5cf.bKhjM');
+            if (first) {
+              let p = first.parentElement;
+              while (p && p !== document.body) {
+                check(p);
+                p = p.parentElement;
+              }
+            }
+            if (best) {
+              best.scrollTop = Math.min(best.scrollTop + stepPx, best.scrollHeight);
+              best.dispatchEvent(new Event('scroll', { bubbles: true }));
+            }
+          }, 400);
+          await this.page.waitForTimeout(800);
+          // maxScroll이 0에 가까우면 컨테이너가 스크롤 불가 → 창/문서 스크롤로 lazy load 트리거
+          if (scrollResult.maxScroll <= 50 && scrollAttempt >= 2) {
+            await this.page.evaluate((step) => {
+              window.scrollBy(0, step);
+              document.documentElement.scrollTop = (document.documentElement.scrollTop || 0) + step;
+              document.body.scrollTop = (document.body.scrollTop || 0) + step;
+              window.dispatchEvent(new Event('scroll'));
+            }, 400);
             await this.page.waitForTimeout(800);
           }
-          
-          // 리뷰 섹션 내부를 스크롤 (JavaScript로)
-          await this.page.evaluate(() => {
-            // 리뷰 섹션 찾기
-            const reviewsSection = document.querySelector('#reviews');
-            if (reviewsSection) {
-              // 리뷰 섹션 내부를 스크롤
-              reviewsSection.scrollTop = reviewsSection.scrollHeight;
-              // 추가 스크롤
-              setTimeout(() => {
-                reviewsSection.scrollTop = reviewsSection.scrollHeight;
-              }, 100);
+          await this.page.waitForTimeout(500);
+        } catch (scrollError) {}
+
+        // 추출 전 스크롤 위치 저장 (스크롤하는 컨테이너와 동일한 요소 사용)
+        const savedScroll = await this.page.evaluate(() => {
+          const section = document.querySelector('#reviews');
+          let containerScrollTop = null;
+          if (section) {
+            let best = null;
+            let bestSh = 0;
+            function check(node) {
+              if (!node || node.nodeType !== 1) return;
+              if (node.scrollHeight > node.clientHeight && node.scrollHeight > bestSh) {
+                bestSh = node.scrollHeight;
+                best = node;
+              }
             }
-            
-            // 페이지 전체도 스크롤
-            window.scrollTo(0, document.body.scrollHeight);
-            
-            // 점진적 스크롤 (여러 번)
-            const scrollHeight = document.documentElement.scrollHeight;
-            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-            const windowHeight = window.innerHeight;
-            
-            for (let i = 0; i < 3; i++) {
-              window.scrollTo({
-                top: currentScroll + windowHeight * (i + 1) * 0.5,
-                behavior: 'smooth'
-              });
+            check(section);
+            const first = section.querySelector('div.Svr5cf, div.Svr5cf.bKhjM');
+            if (first) {
+              let p = first.parentElement;
+              while (p && p !== document.body) {
+                check(p);
+                p = p.parentElement;
+              }
             }
-          });
-          await this.page.waitForTimeout(2000);
-          
-          // End 키로 추가 스크롤 (여러 번)
-          for (let i = 0; i < 3; i++) {
-            await this.page.keyboard.press('End');
-            await this.page.waitForTimeout(1000);
+            if (best) containerScrollTop = best.scrollTop;
           }
-          
-          // 스크롤 이벤트 트리거
-          await this.page.evaluate(() => {
-            window.dispatchEvent(new Event('scroll'));
-            window.dispatchEvent(new Event('scrollend'));
-            // 리뷰 섹션 내부 스크롤 이벤트도 트리거
-            const reviewsSection = document.querySelector('#reviews');
-            if (reviewsSection) {
-              reviewsSection.dispatchEvent(new Event('scroll'));
-            }
-          });
-          await this.page.waitForTimeout(1500);
-          
-        } catch (scrollError) {
-          // 스크롤 에러는 무시
-        }
-        
-        // 리뷰 개수 재확인 (동일한 로케이터로 다시 count)
-        // DOM이 갱신되더라도 locator는 live이므로 그대로 사용
-        // 리뷰 로케이터는 live이지만, DOM 구조가 바뀔 수 있으니 재할당해서 안정성 확보
-        reviewItems = this.page.locator('#reviews div.Svr5cf.bKhjM');
+          return {
+            containerScrollTop,
+            windowScrollY: window.scrollY,
+            documentScrollTop: document.documentElement.scrollTop,
+          };
+        });
+
+        reviewItems = this.page.locator(reviewListSelector);
         const currentCount = await reviewItems.count().catch(() => 0);
-        
-        if (currentCount > lastReviewCount) {
-          console.log(`스크롤 (${scrollAttempt + 1}번째) - 리뷰: ${lastReviewCount}개 → ${currentCount}개`);
-          lastReviewCount = currentCount;
-          noChangeCount = 0;
-        } else {
-          noChangeCount++;
-          if (noChangeCount >= 10) { // 연속 10번 변하지 않으면 중단 (더 많은 스크롤 시도)
-            console.log(`리뷰 개수가 ${noChangeCount}번 연속 변하지 않아 스크롤을 중단합니다.`);
-            break;
+        let addedThisRound = 0;
+        if (currentCount <= 10 && (scrollAttempt < 8 || scrollAttempt % 5 === 0)) {
+          console.log(`[구글 진단] 스크롤 ${scrollAttempt + 1}: DOM리뷰=${currentCount}개, 누적=${reviews.length}개, scrollTop=${lastScrollTop}, maxScroll=${scrollResult.maxScroll}, scrollH=${scrollResult.scrollHeight}, clientH=${scrollResult.clientHeight}, scrolled=${scrollResult.scrolled}, stuck=${scrollStuckCount}`);
+          if (scrollResult.maxScroll <= 0 && scrollAttempt >= 2) {
+            console.log(`[구글 진단] ⚠️ 스크롤 컨테이너 maxScroll=0 → 스크롤 불가. 창/문서 스크롤 시도`);
           }
         }
-      }
-      
-      // 최종 리뷰 개수 확인
-      const reviewCount = await reviewItems.count();
-      console.log(`최종 리뷰 개수: ${reviewCount}개`);
-      
-      // 리뷰 데이터 추출 (제공된 선택자 우선 사용)
-      const reviews = [];
-      for (let i = 0; i < reviewCount; i++) {
-        try {
-          // 각 리뷰 아이템 (nth 사용)
-          const reviewItem = reviewItems.nth(i);
+        for (let i = currentCount - 1; i >= 0; i--) {
+          try {
+            // 각 리뷰 아이템 (nth 사용)
+            const reviewItem = reviewItems.nth(i);
 
           // rating 추출 (사용자 제공: div.GDWaad)
           let rating = 0;
@@ -5115,140 +4636,201 @@ class ScraperService {
             }
             
             if (dateText) {
-              const trimmedDateText = dateText.trim();
+              let trimmedDateText = dateText.trim();
+              // 구글 접미사/접두어 제거 후 파싱 (변환 성공률 향상)
+              const normalizedDateText = trimmedDateText
+                .replace(/\s*Google에서\s*작성\s*/g, ' ')
+                .replace(/\s*on\s+Google\.?\s*/gi, ' ')
+                .replace(/Written\s+/gi, '')
+                .replace(/Edited\s+/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              const textToParse = normalizedDateText.length > 0 ? normalizedDateText : trimmedDateText;
               if (i < 5) {
-                console.log(`[디버깅] 리뷰 ${i + 1} 날짜 텍스트: "${trimmedDateText}"`);
+                console.log(`[디버깅] 리뷰 ${i + 1} 날짜 텍스트: "${trimmedDateText}" → 파싱용: "${textToParse}"`);
               }
-              
-              // 상대 시간 파싱 ("5 months ago on", "a week ago", "2 weeks ago", "정확히 1주 전에 Google에서 작성" 등)
+
+              // 상대 시간 파싱 ("5 months ago on", "2 달 전에 Google에서 작성", "a week ago" 등)
               const relativeTimePatterns = [
-                // 한국어 패턴 (우선 처리) - "전에" 형식도 포함
+                // 한국어 패턴 (우선 처리) - "전에" 형식 포함, 구글 "X 달 전에 Google에서 작성" 지원
                 /정확히\s*(\d+)\s*주\s*전/,
                 /(\d+)\s*주\s*전에?/,
                 /(\d+)\s*개월\s*전에?/,
+                /(\d+)\s*달\s*전에?/,   // 구글: "1 달 전에", "2 달 전에 Google에서 작성"
                 /(\d+)\s*일\s*전에?/,
                 /(\d+)\s*년\s*전에?/,
                 // 영어 패턴
-                /(\d+)\s*(?:month|months|mo)\s*ago/i,
-                /(\d+)\s*(?:week|weeks|wk|w)\s*ago/i,
-                /(\d+)\s*(?:day|days|d)\s*ago/i,
-                /(\d+)\s*(?:year|years|yr|y)\s*ago/i,
+                /(?:Edited\s+)?(\d+)\s*(?:month|months|mo)\s*ago/i,
+                /(?:Edited\s+)?(\d+)\s*(?:week|weeks|wk|w)\s*ago/i,
+                /(?:Edited\s+)?(\d+)\s*(?:day|days|d)\s*ago/i,
+                /(?:Edited\s+)?(\d+)\s*(?:year|years|yr|y)\s*ago/i,
                 /a\s*(?:week|month|day|year)\s*ago/i,
                 /(\d+)\s*(?:시간|hour|hours|h)\s*ago/i,
               ];
               
               let daysAgo = 0;
               let matched = false;
+              let dateUnit = 'day'; // 'day' | 'month' | 'year' (날짜 변환 시 정확한 계산용)
+              let dateUnitValue = 0; // 달/년 변환 시 사용할 숫자 (예: 2달 전 → 2)
               for (const pattern of relativeTimePatterns) {
-                const match = trimmedDateText.match(pattern);
+                const match = textToParse.match(pattern);
                 if (match) {
                   matched = true;
                   if (match[1]) {
-                    // 숫자가 있는 경우 (예: "1주 전", "2 weeks ago")
                     const num = parseInt(match[1]);
-                    // 한국어 패턴 확인 (패턴 소스와 실제 텍스트 모두 확인)
-                    if (pattern.source.includes('주') || trimmedDateText.includes('주')) {
+                    if (pattern.source.includes('주') || textToParse.includes('주')) {
                       daysAgo = num * 7;
-                    } else if (pattern.source.includes('개월') || trimmedDateText.includes('개월')) {
+                      dateUnit = 'day';
+                      dateUnitValue = daysAgo;
+                    } else if (pattern.source.includes('개월') || textToParse.includes('개월')) {
                       daysAgo = num * 30;
-                    } else if ((pattern.source.includes('일') && !pattern.source.includes('작성')) || (trimmedDateText.includes('일') && !trimmedDateText.includes('작성'))) {
+                      dateUnit = 'month';
+                      dateUnitValue = num;
+                    } else if (pattern.source.includes('달') || textToParse.includes(' 달 ') || textToParse.includes('달')) {
+                      daysAgo = num * 30;
+                      dateUnit = 'month';
+                      dateUnitValue = num;
+                    } else if ((pattern.source.includes('일') && !pattern.source.includes('작성')) || (textToParse.includes('일') && !textToParse.includes('작성'))) {
                       daysAgo = num;
-                    } else if (pattern.source.includes('년') || trimmedDateText.includes('년')) {
+                      dateUnit = 'day';
+                      dateUnitValue = num;
+                    } else if (pattern.source.includes('년') || textToParse.includes('년')) {
                       daysAgo = num * 365;
-                    } else if (trimmedDateText.match(/month|months|mo/i)) {
-                      daysAgo = num * 30; // 대략 30일
-                    } else if (trimmedDateText.match(/week|weeks|wk|w/i)) {
+                      dateUnit = 'year';
+                      dateUnitValue = num;
+                    } else if (textToParse.match(/month|months|mo/i)) {
+                      daysAgo = num * 30;
+                      dateUnit = 'month';
+                      dateUnitValue = num;
+                    } else if (textToParse.match(/week|weeks|wk|w/i)) {
                       daysAgo = num * 7;
-                    } else if (trimmedDateText.match(/day|days|d/i)) {
+                      dateUnit = 'day';
+                      dateUnitValue = daysAgo;
+                    } else if (textToParse.match(/day|days|d/i)) {
                       daysAgo = num;
-                    } else if (trimmedDateText.match(/year|years|yr|y/i)) {
+                      dateUnit = 'day';
+                      dateUnitValue = num;
+                    } else if (textToParse.match(/year|years|yr|y/i)) {
                       daysAgo = num * 365;
-                    } else if (trimmedDateText.match(/시간|hour|hours|h/i)) {
-                      daysAgo = 0; // 시간 단위는 0일로 처리
+                      dateUnit = 'year';
+                      dateUnitValue = num;
+                    } else if (textToParse.match(/시간|hour|hours|h/i)) {
+                      daysAgo = 0;
+                      dateUnit = 'day';
                     }
                   } else {
-                    // "a week ago", "a month ago" 등 (숫자가 없는 경우)
-                    if (trimmedDateText.match(/week/i)) {
+                    if (textToParse.match(/week/i)) {
                       daysAgo = 7;
-                    } else if (trimmedDateText.match(/month/i)) {
+                      dateUnitValue = 7;
+                    } else if (textToParse.match(/month/i)) {
                       daysAgo = 30;
-                    } else if (trimmedDateText.match(/day/i)) {
+                      dateUnit = 'month';
+                      dateUnitValue = 1;
+                    } else if (textToParse.match(/day/i)) {
                       daysAgo = 1;
-                    } else if (trimmedDateText.match(/year/i)) {
+                      dateUnitValue = 1;
+                    } else if (textToParse.match(/year/i)) {
                       daysAgo = 365;
+                      dateUnit = 'year';
+                      dateUnitValue = 1;
                     }
                   }
-                  // daysAgo가 설정되었으면 루프 종료
-                  if (daysAgo > 0) {
-                    break;
-                  }
+                  if (daysAgo > 0) break;
                 }
               }
-              
+              if (daysAgo > 0 && dateUnit === 'day' && dateUnitValue === 0) dateUnitValue = daysAgo;
+
               // 패턴 매칭이 안 된 경우에도 텍스트에 포함된 키워드로 확인 (한국어, 영어)
               if (!matched || daysAgo === 0) {
-                // 한국어: "1주 전", "1주 전에", "1개월 전" 등 다양한 형식 지원 (공백 유무 무관, "전에" 형식 포함)
-                const weekMatch = trimmedDateText.match(/(\d+)\s*주\s*전에?/);
+                const weekMatch = textToParse.match(/(\d+)\s*주\s*전에?/);
                 if (weekMatch) {
                   daysAgo = parseInt(weekMatch[1]) * 7;
+                  dateUnit = 'day';
+                  dateUnitValue = daysAgo;
                   matched = true;
                 } else {
-                  const monthMatch = trimmedDateText.match(/(\d+)\s*개월\s*전에?/);
+                  const monthMatch = textToParse.match(/(\d+)\s*개월\s*전에?/);
                   if (monthMatch) {
-                    daysAgo = parseInt(monthMatch[1]) * 30;
+                    dateUnitValue = parseInt(monthMatch[1]);
+                    daysAgo = dateUnitValue * 30;
+                    dateUnit = 'month';
                     matched = true;
                   } else {
-                    const dayMatch = trimmedDateText.match(/(\d+)\s*일\s*전에?/);
+                    const dayMatch = textToParse.match(/(\d+)\s*일\s*전에?/);
                     if (dayMatch) {
                       daysAgo = parseInt(dayMatch[1]);
+                      dateUnit = 'day';
+                      dateUnitValue = daysAgo;
                       matched = true;
                     } else {
-                      const yearMatch = trimmedDateText.match(/(\d+)\s*년\s*전에?/);
+                      const yearMatch = textToParse.match(/(\d+)\s*년\s*전에?/);
                       if (yearMatch) {
-                        daysAgo = parseInt(yearMatch[1]) * 365;
+                        dateUnitValue = parseInt(yearMatch[1]);
+                        daysAgo = dateUnitValue * 365;
+                        dateUnit = 'year';
                         matched = true;
                       } else {
-                        // 영어: "a week ago", "a month ago" 등 (패턴 매칭이 실패한 경우 재시도)
-                        if (trimmedDateText.match(/a\s+week\s+ago/i)) {
+                        if (textToParse.match(/a\s+week\s+ago/i)) {
                           daysAgo = 7;
+                          dateUnitValue = 7;
                           matched = true;
-                        } else if (trimmedDateText.match(/a\s+month\s+ago/i)) {
+                        } else if (textToParse.match(/a\s+month\s+ago/i)) {
                           daysAgo = 30;
+                          dateUnit = 'month';
+                          dateUnitValue = 1;
                           matched = true;
-                        } else if (trimmedDateText.match(/a\s+day\s+ago/i)) {
+                        } else if (textToParse.match(/a\s+day\s+ago/i)) {
                           daysAgo = 1;
+                          dateUnitValue = 1;
                           matched = true;
-                        } else if (trimmedDateText.match(/a\s+year\s+ago/i)) {
+                        } else if (textToParse.match(/a\s+year\s+ago/i)) {
                           daysAgo = 365;
+                          dateUnit = 'year';
+                          dateUnitValue = 1;
                           matched = true;
                         } else {
-                          // 추가 시도: "1주 전에", "1개월 전에" 등 (공백이 없는 경우 또는 "전에" 형식)
-                          const weekMatch2 = trimmedDateText.match(/(\d+)주\s*전에?/);
+                          const weekMatch2 = textToParse.match(/(\d+)주\s*전에?/);
                           if (weekMatch2) {
                             daysAgo = parseInt(weekMatch2[1]) * 7;
+                            dateUnitValue = daysAgo;
                             matched = true;
                           } else {
-                            const monthMatch2 = trimmedDateText.match(/(\d+)개월\s*전에?/);
+                            const monthMatch2 = textToParse.match(/(\d+)개월\s*전에?/);
                             if (monthMatch2) {
-                              daysAgo = parseInt(monthMatch2[1]) * 30;
+                              dateUnitValue = parseInt(monthMatch2[1]);
+                              daysAgo = dateUnitValue * 30;
+                              dateUnit = 'month';
                               matched = true;
                             } else {
-                              // "1개월 전에 Google에서 작성" 형식에서 "1개월" 추출 (더 유연한 패턴)
-                              const monthMatch3 = trimmedDateText.match(/(\d+)\s*개월/);
-                              if (monthMatch3 && (trimmedDateText.includes('전') || trimmedDateText.includes('ago'))) {
-                                daysAgo = parseInt(monthMatch3[1]) * 30;
+                              const monthMatchDash = textToParse.match(/(\d+)\s*달\s*전에?/);
+                              if (monthMatchDash) {
+                                dateUnitValue = parseInt(monthMatchDash[1]);
+                                daysAgo = dateUnitValue * 30;
+                                dateUnit = 'month';
                                 matched = true;
-                                if (i < 5) {
-                                  console.log(`[디버깅] 리뷰 ${i + 1} 개월 패턴 매칭 (fallback): "${trimmedDateText}" → ${daysAgo}일 전`);
-                                }
+                                if (i < 5) console.log(`[디버깅] 리뷰 ${i + 1} 달 패턴 매칭 (fallback): "${textToParse}" → ${dateUnitValue}개월 전`);
                               } else {
-                                // "1주 전에 Google에서 작성" 형식에서 "1주" 추출
-                                const weekMatch3 = trimmedDateText.match(/(\d+)\s*주/);
-                                if (weekMatch3 && (trimmedDateText.includes('전') || trimmedDateText.includes('ago'))) {
-                                  daysAgo = parseInt(weekMatch3[1]) * 7;
+                                const monthMatch3 = textToParse.match(/(\d+)\s*개월/);
+                                if (monthMatch3 && (textToParse.includes('전') || textToParse.includes('ago'))) {
+                                  dateUnitValue = parseInt(monthMatch3[1]);
+                                  daysAgo = dateUnitValue * 30;
+                                  dateUnit = 'month';
                                   matched = true;
-                                  if (i < 5) {
-                                    console.log(`[디버깅] 리뷰 ${i + 1} 주 패턴 매칭 (fallback): "${trimmedDateText}" → ${daysAgo}일 전`);
+                                } else {
+                                  const monthMatchDash2 = textToParse.match(/(\d+)\s*달/);
+                                  if (monthMatchDash2 && (textToParse.includes('전') || textToParse.includes('ago'))) {
+                                    dateUnitValue = parseInt(monthMatchDash2[1]);
+                                    daysAgo = dateUnitValue * 30;
+                                    dateUnit = 'month';
+                                    matched = true;
+                                  } else {
+                                    const weekMatch3 = textToParse.match(/(\d+)\s*주/);
+                                    if (weekMatch3 && (textToParse.includes('전') || textToParse.includes('ago'))) {
+                                      daysAgo = parseInt(weekMatch3[1]) * 7;
+                                      dateUnitValue = daysAgo;
+                                      matched = true;
+                                      if (i < 5) console.log(`[디버깅] 리뷰 ${i + 1} 주 패턴 매칭 (fallback): "${textToParse}" → ${daysAgo}일 전`);
+                                    }
                                   }
                                 }
                               }
@@ -5264,13 +4846,18 @@ class ScraperService {
               if (daysAgo > 0) {
                 const today = new Date();
                 const reviewDateObj = new Date(today);
-                reviewDateObj.setDate(today.getDate() - daysAgo);
+                // 단위별로 정확히 변환 (달/년은 setMonth/setFullYear 사용)
+                if (dateUnit === 'month' && dateUnitValue > 0) {
+                  reviewDateObj.setMonth(today.getMonth() - dateUnitValue);
+                } else if (dateUnit === 'year' && dateUnitValue > 0) {
+                  reviewDateObj.setFullYear(today.getFullYear() - dateUnitValue);
+                } else {
+                  reviewDateObj.setDate(today.getDate() - daysAgo);
+                }
                 date = reviewDateObj.toISOString().split('T')[0];
                 reviewDate = reviewDateObj;
-                
-                // 디버깅: 처음 몇 개 리뷰만 날짜 로그
                 if (i < 5) {
-                  console.log(`[디버깅] 리뷰 ${i + 1} 날짜 파싱 성공: "${dateText}" → ${daysAgo}일 전 → ${date}`);
+                  console.log(`[디버깅] 리뷰 ${i + 1} 날짜 변환 성공: "${trimmedDateText}" → ${date} (${dateUnit} ${dateUnitValue})`);
                 }
               } else if (i < 5) {
                 console.log(`[디버깅] 리뷰 ${i + 1} 날짜 파싱 실패: "${dateText}" (daysAgo=0, matched=${matched})`);
@@ -5285,35 +4872,34 @@ class ScraperService {
             }
           }
 
-          // 날짜를 찾지 못한 경우 리뷰를 건너뜀 (오늘 날짜 사용하지 않음)
+          // 날짜를 찾지 못한 경우: 리뷰 기간 제어와 무관하게 항상 오늘 날짜로 수집(건너뛰지 않음). 기간 필터는 아래 isPeriodFilter에서만 적용
           if (!date) {
-            if (i < 3) {
-              console.log(`[디버깅] 리뷰 ${i + 1} 날짜 없음 → 리뷰 건너뜀`);
+            date = new Date().toISOString().split('T')[0];
+            reviewDate = new Date(date);
+            if (i < 5) {
+              console.log(`[디버깅] 리뷰 ${i + 1} 날짜 없음 → 오늘 날짜로 수집: ${date}`);
             }
-            continue;
           } else {
             reviewDate = new Date(date);
           }
 
           // content 추출
           // - 전체 컨테이너: div.K7oBsc
-          // - 텍스트: div.STQFb.eoY5cb span 또는 div[jsname="NwoMSd"] span
+          // - 접힌 본문은 더보기(Read more) 클릭으로 펼친 뒤 텍스트 수집
+          // - evaluate로 클릭해 Playwright의 scroll-into-view로 뷰가 튀는 것 방지
           let content = '';
           try {
             const contentRoot = reviewItem.locator('div.K7oBsc');
             const rootCount = await contentRoot.count();
             if (rootCount > 0) {
-              // 더보기 클릭 시도
+              // 더보기(Read more)가 있으면 펼치기 (컨테이너 내부에서 JS 클릭으로 스크롤 유지)
               try {
-                const more = contentRoot.locator('button:has-text("Read more"), button:has-text("read more"), span:has-text("Read more"), span:has-text("read more"), span:has-text("더보기")');
-                const moreCount = await more.count();
-                if (moreCount > 0) {
-                  const visible = await more.first().isVisible({ timeout: 1000 }).catch(() => false);
-                  if (visible) {
-                    await more.first().click({ timeout: 2000 }).catch(() => {});
-                    await this.page.waitForTimeout(600);
-                  }
-                }
+                await contentRoot.first().evaluate((root) => {
+                  const btn = root.querySelector('[jsname="kDNJsb"]') ||
+                    Array.from(root.querySelectorAll('button, span[role="button"]')).find(el => /read more|더보기/i.test(el.textContent || ''));
+                  if (btn) btn.click();
+                }).catch(() => {});
+                await this.page.waitForTimeout(500);
               } catch (e) {}
 
               const contentSelectors = [
@@ -5363,18 +4949,16 @@ class ScraperService {
             }
           } catch (e) {}
 
-          // 날짜 필터링 (2주 전까지)
-          // 'all'일 때는 필터링하지 않음
-          let dateFiltered = false;
-          if (dateFilter === 'week' || dateFilter === '2weeks') {
+          // 날짜 필터링: '전체'(all)일 때는 절대 적용 안 함. 일주일/2주 선택 시 기준일 이전 리뷰는 이 건만 건너뛰고, 이번 배치의 나머지(위쪽 최신 리뷰)는 계속 저장
+          const isPeriodFilter = (effectiveDateFilter !== 'all' && (effectiveDateFilter === 'week' || effectiveDateFilter === '2weeks' || effectiveDateFilter === 'twoWeeks'));
+          if (isPeriodFilter) {
             const today = new Date();
-            const twoWeeksAgo = new Date(today);
-            twoWeeksAgo.setDate(today.getDate() - 14);
-            if (reviewDate && reviewDate < twoWeeksAgo) {
-              if (i < 10) {
-                console.log(`[디버깅] 리뷰 ${i + 1} 날짜 필터링: ${date} (2주 전 이전)`);
-              }
-              dateFiltered = true;
+            const daysAgo = (effectiveDateFilter === 'week') ? 7 : 14;
+            const cutoff = new Date(today);
+            cutoff.setDate(today.getDate() - daysAgo);
+            if (reviewDate && reviewDate < cutoff) {
+              console.log(`[구글] 최신순 기준 - ${daysAgo}일 이전 리뷰 (${date}) 건너뜀. 이번 배치 나머지(기준일 이내) 계속 수집.`);
+              dateFilterStopRequested = true;
               continue;
             }
           }
@@ -5384,7 +4968,7 @@ class ScraperService {
           if (reviewKeyword && reviewKeyword.trim().length > 0) keywords.push(reviewKeyword.trim());
 
           if ((content && content.trim().length > 0) || rating > 0 || (nickname && nickname.trim().length > 0)) {
-            reviews.push({
+            const reviewData = {
               content: content ? content.trim() : '',
               nickname: nickname || `사용자${i + 1}`,
               rating: rating,
@@ -5394,8 +4978,51 @@ class ScraperService {
               visitKeyword: visitKeyword || '',
               reviewDate: date,
               revisitFlag: false,
-            });
-            
+            };
+            const dedupeKey = `${reviewData.nickname}|${date || ''}|${(reviewData.content || '').slice(0, 80)}`;
+            if (seenKeys.has(dedupeKey)) continue;
+            seenKeys.add(dedupeKey);
+            reviews.push(reviewData);
+            addedThisRound++;
+
+            // 즉시 저장 (구글은 이 루프에서만 저장함)
+            const canSave = saveImmediately && jobId && companyName && date;
+            if (i < 3 && !canSave) {
+              console.log(`[구글] 저장 조건 미충족 (리뷰 ${i + 1}): saveImmediately=${!!saveImmediately}, jobId=${!!jobId}, companyName=${!!companyName}, date=${date || '(없음)'}`);
+            }
+            if (canSave) {
+              try {
+                const reviewKeywordStr = Array.isArray(keywords) ? keywords.join(', ') : (reviewKeyword || '');
+                const analysis = this.analyzeText(reviewData.content, rating, reviewData.visitKeyword || '', reviewKeywordStr);
+                const saved = await this.saveReview({
+                  portalUrl: '구글',
+                  companyName,
+                  reviewDate: date,
+                  content: reviewData.content,
+                  rating: rating || null,
+                  nickname: reviewData.nickname,
+                  visitKeyword: reviewData.visitKeyword || null,
+                  reviewKeyword: reviewKeywordStr || null,
+                  visitType: reviewData.visitType || null,
+                  emotion: reviewData.emotion || null,
+                  revisitFlag: reviewData.revisitFlag || false,
+                  nRating: analysis.nRating,
+                  nEmotion: analysis.nEmotion,
+                  nCharCount: analysis.nCharCount,
+                  title: null,
+                  additionalInfo: null,
+                });
+                if (saved) {
+                  actualSavedCount++;
+                  if (actualSavedCount <= 10 || actualSavedCount % 50 === 0) {
+                    console.log(`✅ [구글 즉시 저장 성공] ${actualSavedCount}번째: ${reviewData.nickname} - date: ${date}`);
+                  }
+                }
+              } catch (saveError) {
+                console.error(`[구글] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
+              }
+            }
+
             // 디버깅: 처음 10개 리뷰 상세 로그
             if (i < 10) {
               const contentPreview = content ? (content.length > 50 ? content.substring(0, 50) + '...' : content) : '(없음)';
@@ -5405,12 +5032,80 @@ class ScraperService {
             console.log(`[디버깅] 리뷰 ${i + 1} 유효하지 않음: content=${content ? content.length : 0}, rating=${rating}, nickname="${nickname}"`);
           }
           
-        } catch (error) {
-          // 리뷰 추출 실패 시 건너뛰기
-          if (i < 3) console.log(`[디버깅] 리뷰 ${i + 1} 추출 실패:`, error.message);
+          } catch (error) {
+            // 리뷰 추출 실패 시 건너뛰기
+            if (i < 3) console.log(`[디버깅] 리뷰 ${i + 1} 추출 실패:`, error.message);
+          }
+        }
+
+        // 추출 중 스크롤이 위로 올라갔을 수 있으므로 저장해 둔 위치로 복원 (동일 컨테이너)
+        await this.page.evaluate((saved) => {
+          if (saved.containerScrollTop != null) {
+            const section = document.querySelector('#reviews');
+            if (section) {
+              let best = null;
+              let bestSh = 0;
+              function check(node) {
+                if (!node || node.nodeType !== 1) return;
+                if (node.scrollHeight > node.clientHeight && node.scrollHeight > bestSh) {
+                  bestSh = node.scrollHeight;
+                  best = node;
+                }
+              }
+              check(section);
+              const first = section.querySelector('div.Svr5cf, div.Svr5cf.bKhjM');
+              if (first) {
+                let p = first.parentElement;
+                while (p && p !== document.body) {
+                  check(p);
+                  p = p.parentElement;
+                }
+              }
+              if (best) {
+                best.scrollTop = saved.containerScrollTop;
+                best.dispatchEvent(new Event('scroll', { bubbles: true }));
+              }
+            }
+          }
+          window.scrollTo(window.scrollX, saved.windowScrollY);
+          document.documentElement.scrollTop = saved.documentScrollTop;
+        }, savedScroll);
+        await this.page.waitForTimeout(200);
+
+        if (dateFilterStopRequested) {
+          console.log(`[구글] 날짜 기준 도달로 수집 종료. 총 ${reviews.length}개`);
+          break;
+        }
+
+        if (addedThisRound > 0) {
+          noChangeCount = 0;
+          console.log(`[구글] 스크롤 ${scrollAttempt + 1} - 이번에 ${addedThisRound}개 추가, 누적 ${reviews.length}개`);
+        } else {
+          noChangeCount++;
+        }
+        if (currentCount > lastReviewCount) {
+          console.log(`[구글] 스크롤 ${scrollAttempt + 1} - DOM 리뷰 수: ${lastReviewCount} → ${currentCount}`);
+          lastReviewCount = currentCount;
+        }
+        if (scrollAttempt < 4 || scrollAttempt % 8 === 0) {
+          console.log(`[구글] 스크롤 ${scrollAttempt + 1} - scrollTop: ${lastScrollTop}, noChange: ${noChangeCount}, stuck: ${scrollStuckCount}, 누적: ${reviews.length}개`);
+        }
+        // 리뷰 기간과 무관하게 동일한 종료 조건 사용 (기존 정상 동작 복원)
+        const collectedFew = reviews.length <= 20;
+        const minForExit = collectedFew ? 30 : minScrollBeforeExit;
+        const unchangedForExit = collectedFew ? 18 : unchangedLimit;
+        const exitByNoChange = (scrollAttempt + 1 >= minForExit && noChangeCount >= unchangedForExit);
+        const exitByStuck = (scrollStuckCount >= scrollStuckLimit && scrollAttempt + 1 >= (collectedFew ? 22 : 15));
+        if (exitByNoChange) {
+          console.log(`[구글] 스크롤 중단(신규 없음): ${noChangeCount}번 연속 추가 0건, scrollTop=${lastScrollTop}, maxScroll=${scrollResult.maxScroll}, DOM리뷰=${currentCount}개 → 최종 수집 ${reviews.length}개`);
+          break;
+        }
+        if (exitByStuck) {
+          console.log(`[구글] 스크롤 중단(스크롤 멈춤): ${scrollStuckCount}번 연속 scroll 미진행, scrollTop=${lastScrollTop}, maxScroll=${scrollResult.maxScroll} → 최종 수집 ${reviews.length}개. (maxScroll=0이면 해당 페이지에서 스크롤 컨테이너를 찾지 못한 것)`);
+          break;
         }
       }
-      
+
       console.log(`구글 여행 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
       if (saveImmediately) {
         console.log(`[구글] 즉시 저장 완료: ${actualSavedCount}개 리뷰 저장 성공 (추출: ${reviews.length}개)`);

@@ -3,6 +3,10 @@ import jobService from '../services/jobService.js';
 
 const router = express.Router();
 
+// ADMIN_PASSWORD 미설정 시 클라이언트 기본값(admin123)과 맞춰 로컬에서 바로 동작하도록 기본값 사용
+const expectedAdminSecret = (process.env.ADMIN_PASSWORD || 'admin123').trim();
+console.log('[admin] API 인증: 서버가 기대하는 비밀번호 =', process.env.ADMIN_PASSWORD ? '환경변수 ADMIN_PASSWORD 값 사용' : 'admin123 (기본값)');
+
 /**
  * 관리자 인증 미들웨어 (간단 버전)
  * 실제로는 JWT 토큰 기반 인증을 사용하는 것이 좋습니다.
@@ -12,11 +16,12 @@ const authenticateAdmin = (req, res, next) => {
   if (req.method === 'OPTIONS') {
     return next();
   }
-  
-  const adminSecret = req.headers['x-admin-secret'];
-  if (adminSecret === process.env.ADMIN_PASSWORD) {
+
+  const adminSecret = (req.headers['x-admin-secret'] || '').trim();
+  if (adminSecret === expectedAdminSecret) {
     next();
   } else {
+    console.warn('[admin] 인증 실패 - 클라이언트가 보낸 x-admin-secret:', adminSecret ? '있음(서버와 값이 다름)' : '없음(헤더 누락)');
     res.status(401).json({ error: '인증 실패' });
   }
 };

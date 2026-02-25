@@ -32,6 +32,7 @@ Thumbs.db
 
 # Playwright
 .playwright/
+.playwright-mcp/
 test-results/
 
 # Railway

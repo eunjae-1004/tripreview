@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'admin123';
+const ADMIN_SECRET = (process.env.NEXT_PUBLIC_ADMIN_SECRET ?? '').trim() || 'admin123';
 
 // 환경 변수 확인 및 경고
 if (typeof window !== 'undefined') {
@@ -137,9 +137,10 @@ export default function Home() {
         },
       });
       const data = await response.json();
-      setRecentJobs(data);
+      setRecentJobs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('작업 목록 조회 실패:', error);
+      setRecentJobs([]);
     }
   };
 
@@ -152,9 +153,10 @@ export default function Home() {
         },
       });
       const data = await response.json();
-      setCompanies(data);
+      setCompanies(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('기업 목록 조회 실패:', error);
+      setCompanies([]);
     }
   };
 
@@ -248,7 +250,9 @@ export default function Home() {
       // API URL 확인 메시지 추가
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
         if (API_URL === 'http://localhost:3000') {
-          setMessage(`작업 시작 실패: Vercel 환경 변수 NEXT_PUBLIC_API_URL이 설정되지 않았습니다. Railway 서버 URL을 설정하세요.`);
+          setMessage(`작업 시작 실패: 로컬 서버에 연결할 수 없습니다.
+1. 서버 터미널에서 포트 3000으로 실행 중인지 확인하세요. (예: npm run dev:headed)
+2. 클라이언트를 실행할 때 NEXT_PUBLIC_API_URL을 설정했다면 서버가 먼저 켜져 있어야 합니다.`);
         } else {
           const fullUrl = `${API_URL}/api/admin/jobs/start`;
           setMessage(`작업 시작 실패: 서버에 연결할 수 없습니다. 
@@ -472,9 +476,10 @@ export default function Home() {
             <p className={styles.filterDescription} style={{ marginTop: 8, padding: 10, background: '#fff8e1', borderRadius: 6 }}>
               <strong>작업 화면(브라우저 창)을 보려면:</strong>
               <br />1) 서버를 <strong>로컬 PC에서</strong> 실행하세요 (Railway가 아닌, 본인 컴퓨터에서).
-              <br />2) 서버 실행 <strong>전에</strong> 터미널에서 <code style={{ background: '#eee', padding: '2px 6px' }}>PLAYWRIGHT_HEADED=1</code> 환경 변수를 설정하세요.
-              <br />3) 관리자 페이지도 <strong>로컬 주소</strong>(예: http://localhost:3000)로 접속한 뒤 디버그 체크하고 실행하세요.
-              <br />※ 배포된 사이트에서 실행하면 작업이 Railway 서버에서 돌아가서 브라우저 창이 보이지 않습니다.
+              <br />2) 서버를 <code style={{ background: '#eee', padding: '2px 6px' }}>PLAYWRIGHT_HEADED=1</code> 또는 <code style={{ background: '#eee', padding: '2px 6px' }}>npm run dev:headed</code>로 실행하세요.
+              <br />3) 이렇게 하면 <strong>디버그 체크 없이</strong> 실행해도 브라우저가 표시됩니다 (구글 등 리뷰 로딩이 headless보다 안정적일 수 있음).
+              <br />4) <strong>디버그를 체크</strong>하면 단계마다 &quot;다음 단계&quot; 클릭으로 진행합니다.
+              <br />※ 배포된 사이트에서 실행하면 Railway 서버에서 돌아가서 브라우저 창이 보이지 않습니다.
             </p>
           </div>
 
@@ -621,12 +626,12 @@ export default function Home() {
             <div className={styles.statisticsGrid}>
               <div className={styles.statCard}>
                 <div className={styles.statLabel}>전체 리뷰</div>
-                <div className={styles.statValue}>{statistics.totalReviews.toLocaleString()}</div>
+                <div className={styles.statValue}>{(statistics.totalReviews ?? 0).toLocaleString()}</div>
               </div>
-              {statistics.byPortal.map((portal) => (
+              {(statistics.byPortal ?? []).map((portal) => (
                 <div key={portal.portal_url} className={styles.statCard}>
                   <div className={styles.statLabel}>{portal.portal_url}</div>
-                  <div className={styles.statValue}>{parseInt(portal.count).toLocaleString()}</div>
+                  <div className={styles.statValue}>{(Number(portal?.count) || 0).toLocaleString()}</div>
                 </div>
               ))}
             </div>
@@ -635,13 +640,13 @@ export default function Home() {
 
         {/* 기업 목록 */}
         <section className={styles.companiesPanel}>
-          <h2>기업 목록 ({companies.length}개)</h2>
-          {companies.length === 0 ? (
+          <h2>기업 목록 ({(Array.isArray(companies) ? companies : []).length}개)</h2>
+          {(Array.isArray(companies) ? companies : []).length === 0 ? (
             <p className={styles.empty}>등록된 기업이 없습니다.</p>
           ) : (
             <div className={styles.companiesList}>
-              {companies.map((company) => {
-                const companyStats = statistics?.byCompanyAndPortal.filter(
+              {(Array.isArray(companies) ? companies : []).map((company) => {
+                const companyStats = (statistics?.byCompanyAndPortal ?? []).filter(
                   (s) => s.company_name === company.company_name
                 ) || [];
                 const totalCompanyReviews = companyStats.reduce(
@@ -711,11 +716,11 @@ export default function Home() {
         {/* 최근 작업 목록 */}
         <section className={styles.jobsPanel}>
           <h2>최근 작업 목록</h2>
-          {recentJobs.length === 0 ? (
+          {(Array.isArray(recentJobs) ? recentJobs : []).length === 0 ? (
             <p className={styles.empty}>작업 내역이 없습니다.</p>
           ) : (
             <div className={styles.jobsList}>
-              {recentJobs.filter((j): j is Job => j != null && typeof j.id === 'number').map((job) => (
+              {(Array.isArray(recentJobs) ? recentJobs : []).filter((j): j is Job => j != null && typeof j.id === 'number').map((job) => (
                 <div key={job.id} className={styles.jobItem}>
                   <div className={styles.jobHeader}>
                     <span className={styles.jobId}>작업 #{job.id}</span>

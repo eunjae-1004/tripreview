@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "dev:headed": "cross-env PLAYWRIGHT_HEADED=1 node src/index.js",
+    "stop": "npx kill-port 3000",
     "migrate": "node src/db/migrate.js",
     "migrate:urls": "node src/db/migrate-add-urls.js",
     "test": "playwright test",
@@ -34,6 +36,8 @@
     "playwright": "^1.40.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "cross-env": "^7.0.3",
+    "kill-port": "^2.0.1"
   }
 }
