@@ -732,14 +732,17 @@ class ScraperService {
             }
             processedReviewIndex = currentPageReviewCount;
 
-            // 더보기 버튼: 여러 선택자 시도 (네이버맵 UI 변경 대응). 첫 페이지(10건) 후에는 스크롤 후 재탐색
+            // 리뷰 목록 더보기(다음 페이지): 리스트 하단 버튼만 클릭 (각 리뷰 본문 "더보기"와 구분)
+            // 네이버맵 UI 변경 시 선택자는 개발자 도구로 재확인 필요. 아래 순서로 시도
             const moreButtonSelectors = [
               'a.place_btn_more:has-text("더보기")',
-              'a:has-text("더보기")',
-              'button:has-text("더보기")',
               'div.NSTUp > div > a',
               'div.place_section.k1QQ5 div.NSTUp > div > a',
+              'ul#_review_list ~ * a:has-text("더보기")',
+              'ul#_review_list ~ * button:has-text("더보기")',
               '[class*="more"]:has-text("더보기")',
+              'a:has-text("더보기")',
+              'button:has-text("더보기")',
             ];
             let moreClicked = false;
             for (const sel of moreButtonSelectors) {
@@ -757,7 +760,13 @@ class ScraperService {
               } catch (_) {}
             }
             if (!moreClicked && reviews.length <= 15) {
-              await frame.evaluate(() => window.scrollBy(0, 400));
+              try {
+                await frame.evaluate(() => {
+                  const list = document.querySelector('ul#_review_list');
+                  if (list && list.parentElement) list.parentElement.scrollTop = list.parentElement.scrollHeight;
+                  window.scrollBy(0, 500);
+                });
+              } catch (_) {}
               await this.page.waitForTimeout(2000);
               for (const sel of moreButtonSelectors) {
                 try {
@@ -773,6 +782,42 @@ class ScraperService {
                   }
                 } catch (_) {}
               }
+            }
+            if (!moreClicked && frame.getByText) {
+              try {
+                const byText = frame.getByText('더보기', { exact: false }).first();
+                if (await byText.count() > 0 && (await byText.isVisible().catch(() => false))) {
+                  await byText.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(500);
+                  await byText.click({ timeout: 5000 });
+                  await this.page.waitForTimeout(2500);
+                  moreClicked = true;
+                  console.log(`[네이버맵] 더보기 클릭 성공 (getByText)`);
+                }
+              } catch (_) {}
+            }
+            if (!moreClicked && frame.evaluate) {
+              try {
+                moreClicked = await frame.evaluate(() => {
+                  const list = document.querySelector('ul#_review_list');
+                  if (!list) return false;
+                  const lis = list.querySelectorAll('li');
+                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
+                  const candidates = Array.from(document.querySelectorAll('a, button')).filter(el => {
+                    if (!/더보기/.test((el.textContent || '').trim())) return false;
+                    return !inAnyLi(el);
+                  });
+                  const btn = candidates.find(el => el.offsetParent != null);
+                  if (btn) { btn.click(); return true; }
+                  const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
+                  if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
+                  return false;
+                });
+                if (moreClicked) {
+                  await this.page.waitForTimeout(2500);
+                  console.log(`[네이버맵] 더보기 클릭 성공 (evaluate)`);
+                }
+              } catch (_) {}
             }
             if (!moreClicked) {
               console.log(`[네이버맵] 더보기 버튼 없음 또는 클릭 불가 → 수집 종료. 누적 ${reviews.length}개`);
@@ -1751,36 +1796,72 @@ class ScraperService {
               break;
             }
             
-            // 현재 페이지의 모든 리뷰를 수집했으면 더보기 버튼 클릭하여 다음 페이지 로드
+            // 현재 페이지의 모든 리뷰를 수집했으면 더보기 버튼 클릭하여 다음 페이지 로드 (선택자·fallback은 locator 경로와 동일)
             processedReviewIndex = currentPageReviewCount; // 처리된 인덱스 업데이트
-            
-            // 리뷰 목록을 더 불러오는 더보기 버튼 찾기
-            const loadMoreButton = frame.locator('div.NSTUp > div > a, div.place_section.k1QQ5 div.NSTUp > div > a').first();
-            const loadMoreCount = await loadMoreButton.count();
-            
-            if (loadMoreCount > 0) {
+            const moreButtonSelectorsSecond = [
+              'a.place_btn_more:has-text("더보기")',
+              'div.NSTUp > div > a',
+              'div.place_section.k1QQ5 div.NSTUp > div > a',
+              'ul#_review_list ~ * a:has-text("더보기")',
+              'ul#_review_list ~ * button:has-text("더보기")',
+              '[class*="more"]:has-text("더보기")',
+              'a:has-text("더보기")',
+              'button:has-text("더보기")',
+            ];
+            let moreClickedSecond = false;
+            for (const sel of moreButtonSelectorsSecond) {
               try {
-                const isVisible = await loadMoreButton.isVisible().catch(() => false);
-                if (isVisible) {
-                  await loadMoreButton.scrollIntoViewIfNeeded();
-                  await this.page.waitForTimeout(1000);
-                  await loadMoreButton.click({ timeout: 5000 });
-                  await this.page.waitForTimeout(3000); // 새 리뷰 로딩 대기
-                  console.log(`[네이버맵] 더보기 버튼 클릭 - 다음 페이지 로드 중...`);
-                  
-                  // 새 리뷰가 로드될 때까지 대기
-                  await this.page.waitForTimeout(2000);
-                } else {
-                  console.log('[네이버맵] 더보기 버튼이 보이지 않습니다.');
-                  break; // 더 이상 리뷰가 없음
+                const btn = frame.locator(sel).first();
+                if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                  await btn.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(500);
+                  await btn.click({ timeout: 5000 });
+                  await this.page.waitForTimeout(2500);
+                  moreClickedSecond = true;
+                  console.log(`[네이버맵] 더보기 버튼 클릭 - 다음 페이지 로드 (선택자)`);
+                  break;
                 }
-              } catch (e) {
-                console.log(`[네이버맵] 더보기 버튼 클릭 실패: ${e.message}`);
-                break; // 더보기 버튼 클릭 실패 시 종료
-              }
-            } else {
+              } catch (_) {}
+            }
+            if (!moreClickedSecond && frame.getByText) {
+              try {
+                const byText = frame.getByText('더보기', { exact: false }).first();
+                if (await byText.count() > 0 && (await byText.isVisible().catch(() => false))) {
+                  await byText.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(500);
+                  await byText.click({ timeout: 5000 });
+                  await this.page.waitForTimeout(2500);
+                  moreClickedSecond = true;
+                  console.log(`[네이버맵] 더보기 버튼 클릭 (getByText)`);
+                }
+              } catch (_) {}
+            }
+            if (!moreClickedSecond && frame.evaluate) {
+              try {
+                moreClickedSecond = await frame.evaluate(() => {
+                  const list = document.querySelector('ul#_review_list');
+                  if (!list) return false;
+                  const lis = list.querySelectorAll('li');
+                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
+                  const candidates = Array.from(document.querySelectorAll('a, button')).filter(el => {
+                    if (!/더보기/.test((el.textContent || '').trim())) return false;
+                    return !inAnyLi(el);
+                  });
+                  const btn = candidates.find(el => el.offsetParent != null);
+                  if (btn) { btn.click(); return true; }
+                  const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
+                  if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
+                  return false;
+                });
+                if (moreClickedSecond) {
+                  await this.page.waitForTimeout(2500);
+                  console.log(`[네이버맵] 더보기 버튼 클릭 (evaluate)`);
+                }
+              } catch (_) {}
+            }
+            if (!moreClickedSecond) {
               console.log('[네이버맵] 더보기 버튼이 없습니다. 모든 리뷰 수집 완료.');
-              break; // 더 이상 리뷰가 없음
+              break;
             }
           }
           
