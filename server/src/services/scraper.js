@@ -738,17 +738,36 @@ class ScraperService {
               'a.place_btn_more:has-text("더보기")',
               'div.NSTUp > div > a',
               'div.place_section.k1QQ5 div.NSTUp > div > a',
+              '#app-root a:has-text("더보기")',
               'ul#_review_list ~ * a:has-text("더보기")',
               'ul#_review_list ~ * button:has-text("더보기")',
               '[class*="more"]:has-text("더보기")',
               'a:has-text("더보기")',
               'button:has-text("더보기")',
             ];
+            // 리스트 하단 노출: 스크롤을 먼저 해서 더보기 버튼이 보이게 함
+            try {
+              await frame.evaluate(() => {
+                const list = document.querySelector('ul#_review_list');
+                if (list && list.parentElement) {
+                  list.parentElement.scrollTop = list.parentElement.scrollHeight;
+                }
+                const appRoot = document.querySelector('#app-root');
+                if (appRoot && appRoot.parentElement) {
+                  appRoot.parentElement.scrollTop = (appRoot.parentElement.scrollHeight || 0);
+                }
+                window.scrollTo(0, document.body.scrollHeight);
+              });
+              await this.page.keyboard.press('End');
+              await this.page.waitForTimeout(800);
+            } catch (_) {}
             let moreClicked = false;
             for (const sel of moreButtonSelectors) {
               try {
-                const btn = frame.locator(sel).first();
-                if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                const loc = frame.locator(sel);
+                const useLast = (sel === 'a:has-text("더보기")' || sel === 'button:has-text("더보기")');
+                const btn = useLast ? loc.last() : loc.first();
+                if (await loc.count() > 0 && (await btn.isVisible().catch(() => false))) {
                   await btn.scrollIntoViewIfNeeded();
                   await this.page.waitForTimeout(500);
                   await btn.click({ timeout: 5000 });
@@ -764,14 +783,16 @@ class ScraperService {
                 await frame.evaluate(() => {
                   const list = document.querySelector('ul#_review_list');
                   if (list && list.parentElement) list.parentElement.scrollTop = list.parentElement.scrollHeight;
-                  window.scrollBy(0, 500);
+                  window.scrollBy(0, 800);
                 });
               } catch (_) {}
               await this.page.waitForTimeout(2000);
               for (const sel of moreButtonSelectors) {
                 try {
-                  const btn = frame.locator(sel).first();
-                  if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                  const loc = frame.locator(sel);
+                  const useLast = (sel === 'a:has-text("더보기")' || sel === 'button:has-text("더보기")');
+                  const btn = useLast ? loc.last() : loc.first();
+                  if (await loc.count() > 0 && (await btn.isVisible().catch(() => false))) {
                     await btn.scrollIntoViewIfNeeded();
                     await this.page.waitForTimeout(500);
                     await btn.click({ timeout: 5000 });
@@ -785,14 +806,18 @@ class ScraperService {
             }
             if (!moreClicked && frame.getByText) {
               try {
-                const byText = frame.getByText('더보기', { exact: false }).first();
-                if (await byText.count() > 0 && (await byText.isVisible().catch(() => false))) {
-                  await byText.scrollIntoViewIfNeeded();
-                  await this.page.waitForTimeout(500);
-                  await byText.click({ timeout: 5000 });
-                  await this.page.waitForTimeout(2500);
-                  moreClicked = true;
-                  console.log(`[네이버맵] 더보기 클릭 성공 (getByText)`);
+                const byText = frame.getByText('더보기', { exact: false });
+                const count = await byText.count();
+                if (count > 0) {
+                  const lastBtn = byText.nth(count - 1);
+                  if (await lastBtn.isVisible().catch(() => false)) {
+                    await lastBtn.scrollIntoViewIfNeeded();
+                    await this.page.waitForTimeout(500);
+                    await lastBtn.click({ timeout: 5000 });
+                    await this.page.waitForTimeout(2500);
+                    moreClicked = true;
+                    console.log(`[네이버맵] 더보기 클릭 성공 (getByText 마지막)`);
+                  }
                 }
               } catch (_) {}
             }
@@ -801,17 +826,21 @@ class ScraperService {
                 moreClicked = await frame.evaluate(() => {
                   const list = document.querySelector('ul#_review_list');
                   if (!list) return false;
-                  const lis = list.querySelectorAll('li');
-                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
                   const candidates = Array.from(document.querySelectorAll('a, button')).filter(el => {
                     if (!/더보기/.test((el.textContent || '').trim())) return false;
-                    return !inAnyLi(el);
+                    return el.offsetParent != null;
                   });
-                  const btn = candidates.find(el => el.offsetParent != null);
-                  if (btn) { btn.click(); return true; }
-                  const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
-                  if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
-                  return false;
+                  if (candidates.length === 0) {
+                    const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
+                    if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
+                    return false;
+                  }
+                  const lis = list.querySelectorAll('li');
+                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
+                  const outsideLi = candidates.filter(el => !inAnyLi(el));
+                  const target = outsideLi.length > 0 ? outsideLi[outsideLi.length - 1] : candidates[candidates.length - 1];
+                  target.click();
+                  return true;
                 });
                 if (moreClicked) {
                   await this.page.waitForTimeout(2500);
@@ -1796,12 +1825,24 @@ class ScraperService {
               break;
             }
             
-            // 현재 페이지의 모든 리뷰를 수집했으면 더보기 버튼 클릭하여 다음 페이지 로드 (선택자·fallback은 locator 경로와 동일)
+            // 현재 페이지의 모든 리뷰를 수집했으면 더보기 버튼 클릭하여 다음 페이지 로드 (locator 경로와 동일: 스크롤 → 선택자 → getByText 마지막 → evaluate)
             processedReviewIndex = currentPageReviewCount; // 처리된 인덱스 업데이트
+            try {
+              await frame.evaluate(() => {
+                const list = document.querySelector('ul#_review_list');
+                if (list && list.parentElement) list.parentElement.scrollTop = list.parentElement.scrollHeight;
+                const appRoot = document.querySelector('#app-root');
+                if (appRoot && appRoot.parentElement) appRoot.parentElement.scrollTop = (appRoot.parentElement.scrollHeight || 0);
+                window.scrollTo(0, document.body.scrollHeight);
+              });
+              await this.page.keyboard.press('End');
+              await this.page.waitForTimeout(800);
+            } catch (_) {}
             const moreButtonSelectorsSecond = [
               'a.place_btn_more:has-text("더보기")',
               'div.NSTUp > div > a',
               'div.place_section.k1QQ5 div.NSTUp > div > a',
+              '#app-root a:has-text("더보기")',
               'ul#_review_list ~ * a:has-text("더보기")',
               'ul#_review_list ~ * button:has-text("더보기")',
               '[class*="more"]:has-text("더보기")',
@@ -1811,8 +1852,10 @@ class ScraperService {
             let moreClickedSecond = false;
             for (const sel of moreButtonSelectorsSecond) {
               try {
-                const btn = frame.locator(sel).first();
-                if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+                const loc = frame.locator(sel);
+                const useLast = (sel === 'a:has-text("더보기")' || sel === 'button:has-text("더보기")');
+                const btn = useLast ? loc.last() : loc.first();
+                if (await loc.count() > 0 && (await btn.isVisible().catch(() => false))) {
                   await btn.scrollIntoViewIfNeeded();
                   await this.page.waitForTimeout(500);
                   await btn.click({ timeout: 5000 });
@@ -1825,14 +1868,18 @@ class ScraperService {
             }
             if (!moreClickedSecond && frame.getByText) {
               try {
-                const byText = frame.getByText('더보기', { exact: false }).first();
-                if (await byText.count() > 0 && (await byText.isVisible().catch(() => false))) {
-                  await byText.scrollIntoViewIfNeeded();
-                  await this.page.waitForTimeout(500);
-                  await byText.click({ timeout: 5000 });
-                  await this.page.waitForTimeout(2500);
-                  moreClickedSecond = true;
-                  console.log(`[네이버맵] 더보기 버튼 클릭 (getByText)`);
+                const byText = frame.getByText('더보기', { exact: false });
+                const count = await byText.count();
+                if (count > 0) {
+                  const lastBtn = byText.nth(count - 1);
+                  if (await lastBtn.isVisible().catch(() => false)) {
+                    await lastBtn.scrollIntoViewIfNeeded();
+                    await this.page.waitForTimeout(500);
+                    await lastBtn.click({ timeout: 5000 });
+                    await this.page.waitForTimeout(2500);
+                    moreClickedSecond = true;
+                    console.log(`[네이버맵] 더보기 버튼 클릭 (getByText 마지막)`);
+                  }
                 }
               } catch (_) {}
             }
@@ -1841,17 +1888,21 @@ class ScraperService {
                 moreClickedSecond = await frame.evaluate(() => {
                   const list = document.querySelector('ul#_review_list');
                   if (!list) return false;
-                  const lis = list.querySelectorAll('li');
-                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
                   const candidates = Array.from(document.querySelectorAll('a, button')).filter(el => {
                     if (!/더보기/.test((el.textContent || '').trim())) return false;
-                    return !inAnyLi(el);
+                    return el.offsetParent != null;
                   });
-                  const btn = candidates.find(el => el.offsetParent != null);
-                  if (btn) { btn.click(); return true; }
-                  const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
-                  if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
-                  return false;
+                  if (candidates.length === 0) {
+                    const anyMore = document.querySelector('a.place_btn_more, div.NSTUp a');
+                    if (anyMore && /더보기/.test((anyMore.textContent || ''))) { anyMore.click(); return true; }
+                    return false;
+                  }
+                  const lis = list.querySelectorAll('li');
+                  const inAnyLi = (el) => { for (const li of lis) { if (li.contains(el)) return true; } return false; };
+                  const outsideLi = candidates.filter(el => !inAnyLi(el));
+                  const target = outsideLi.length > 0 ? outsideLi[outsideLi.length - 1] : candidates[candidates.length - 1];
+                  target.click();
+                  return true;
                 });
                 if (moreClickedSecond) {
                   await this.page.waitForTimeout(2500);
