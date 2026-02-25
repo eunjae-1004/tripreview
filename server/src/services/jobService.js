@@ -357,14 +357,18 @@ class JobService {
         ? portals 
         : ['naver', 'kakao', 'yanolja', 'agoda', 'google']; // 기본값: 모든 포털
       
+      const totalCompanies = companies.rows.length;
       console.log(`[작업 시작] 스크래핑할 포털: ${enabledPortals.join(', ')} (입력: ${portals ? JSON.stringify(portals) : 'null'})`);
-      this.appendProgressLog(`기업 ${companies.rows.length}개, 포털: ${enabledPortals.join(', ')}`);
+      this.appendProgressLog(`기업 ${totalCompanies}개, 포털: ${enabledPortals.join(', ')}`);
 
+      let companyIndex = 0;
       for (const company of companies.rows) {
+        companyIndex++;
         try {
           this.ensureNotCancelled();
           const companyLabel = `company="${company.company_name}"`;
-          this.appendProgressLog(`--- 기업: ${company.company_name} ---`);
+          this.appendProgressLog(`--- 기업 ${companyIndex}/${totalCompanies}: ${company.company_name} ---`);
+          console.log(`[작업 진행] 기업 ${companyIndex}/${totalCompanies}: ${company.company_name}`);
 
           // 포털별로 try/catch 분리: 한 포털 실패가 전체를 멈추지 않도록
           if (enabledPortals.includes('naver')) {
@@ -515,6 +519,8 @@ class JobService {
         }
       }
 
+      this.appendProgressLog(`모든 기업 처리 완료 (총 ${totalCompanies}개)`);
+      console.log(`[작업 완료] 기업 ${totalCompanies}개 모두 처리 완료`);
       await this.updateJobStatus(job.id, 'completed', {
         completedAt: new Date(),
         // total/success/error 카운트는 scraper.saveReview()에서 누적 업데이트 중이므로

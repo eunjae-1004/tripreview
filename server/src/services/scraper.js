@@ -698,6 +698,17 @@ class ScraperService {
                     else {
                       const md = t.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
                       if (md) { const y = today.getFullYear(); reviewDate = `${y}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`; }
+                      else {
+                        const ymd = t.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                        if (ymd) {
+                          let y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
+                          const mo = ymd[2].padStart(2, '0');
+                          const dy = ymd[3].padStart(2, '0');
+                          const mn = parseInt(mo, 10);
+                          const dn = parseInt(dy, 10);
+                          if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                        }
+                      }
                     }
                   }
                 }
@@ -707,6 +718,16 @@ class ScraperService {
                 if (m) {
                   const y = new Date().getFullYear();
                   reviewDate = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+                } else {
+                  const ymd = allText.match(/(\d{4}|\d{2})\.(\d{1,2})\.(\d{1,2})\.?/);
+                  if (ymd) {
+                    const y = ymd[1].length === 4 ? ymd[1] : (parseInt(ymd[1], 10) < 50 ? `20${ymd[1]}` : `19${ymd[1]}`);
+                    const mo = ymd[2].padStart(2, '0');
+                    const dy = ymd[3].padStart(2, '0');
+                    const mn = parseInt(mo, 10);
+                    const dn = parseInt(dy, 10);
+                    if (mn >= 1 && mn <= 12 && dn >= 1 && dn <= 31) reviewDate = `${y}-${mo}-${dy}`;
+                  }
                 }
               }
               if (!reviewDate) { naverNoDateSkipCount++; skippedNoDate = true; }
