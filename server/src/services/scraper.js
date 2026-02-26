@@ -895,7 +895,7 @@ class ScraperService {
         }
       }
 
-      // 2순위: locator로 0건이면 evaluate(구 선택자) 시도
+      // 2순위: locator로 0건이면 evaluate 시도
       if (reviews.length === 0 && frame && typeof frame.evaluate === 'function') {
         reviews = await frame.evaluate(() => {
         const results = [];
@@ -3208,27 +3208,6 @@ class ScraperService {
   }
 
   /**
-   * 굿초이스 스크래핑 (예시)
-   */
-  async scrapeGoodchoice(url) {
-    // 굿초이스 스크래핑 로직
-    return [];
-  }
-
-  /**
-   * [구 구글 스크래핑 제거됨] 기존에는 scrapeGoogle이 두 번 정의되어 있었고, 나중 정의(div.Svr5cf.bKhjM + 스크롤)만 사용됩니다.
-   * 10건만 수집되는 현상은 스크롤 후에도 DOM에 10개만 매칭되기 때문입니다. 아래 scrapeGoogle 하나만 사용합니다.
-   */
-
-  /**
-   * 트립어드바이저 스크래핑 (예시)
-   */
-  async scrapeTripadvisor(url) {
-    // 트립어드바이저 스크래핑 로직
-    return [];
-  }
-
-  /**
    * 아고다 스크래핑
    * @param {string} companyName - 기업명
    * @param {string} dateFilter - 날짜 필터 ('all', 'week', '2weeks')
@@ -5387,10 +5366,9 @@ class ScraperService {
       reviews = await this.scrapeYanolja(companyName, dateFilter, jobId, 'yanolja', true);
     } else if (portalUrl && portalUrl.includes('google.com')) {
       reviews = await this.scrapeGoogle(companyName, dateFilter, jobId, 'google', true);
-    } else if (portalUrl && portalUrl.includes('goodchoice.kr')) {
-      reviews = await this.scrapeGoodchoice(portalUrl);
-    } else if (portalUrl && portalUrl.includes('tripadvisor.co.kr')) {
-      reviews = await this.scrapeTripadvisor(portalUrl);
+    } else if (portalUrl && (portalUrl.includes('goodchoice.kr') || portalUrl.includes('tripadvisor.co.kr'))) {
+      console.log('굿초이스/트립어드바이저 스크래핑은 현재 미구현입니다.');
+      reviews = [];
     } else if (portalUrl && portalUrl.includes('agoda.com')) {
       reviews = await this.scrapeAgoda(companyName, dateFilter, portalUrl, jobId, 'agoda', true);
     }
