@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './page.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -71,6 +71,8 @@ export default function Home() {
   const [breakpointMode, setBreakpointMode] = useState(false);
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [waitingForContinue, setWaitingForContinue] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(true);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   
   const availablePortals = [
     { id: 'naver', name: '네이버맵' },
@@ -157,6 +159,46 @@ export default function Home() {
     } catch (error) {
       console.error('기업 목록 조회 실패:', error);
       setCompanies([]);
+    }
+  };
+
+  // 스케줄 상태 조회
+  const fetchScheduleStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/schedule/status`, {
+        headers: { 'x-admin-secret': ADMIN_SECRET },
+      });
+      const data = await response.json();
+      setScheduleEnabled(data.enabled === true);
+    } catch (error) {
+      console.error('스케줄 상태 조회 실패:', error);
+    }
+  };
+
+  // 스케줄 토글 (반복 실행 활성/비활성)
+  const handleToggleSchedule = async () => {
+    setScheduleLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/schedule`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': ADMIN_SECRET,
+        },
+        body: JSON.stringify({ enabled: !scheduleEnabled }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setScheduleEnabled(data.enabled);
+        setMessage(data.message || (data.enabled ? '반복 실행이 활성화되었습니다.' : '반복 실행이 비활성화되었습니다.'));
+      } else {
+        setMessage(`오류: ${data.error || '스케줄 설정 실패'}`);
+      }
+    } catch (error) {
+      console.error('스케줄 토글 실패:', error);
+      setMessage('스케줄 설정 요청 실패');
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -306,6 +348,7 @@ export default function Home() {
     fetchRecentJobs();
     fetchCompanies();
     fetchStatistics();
+    fetchScheduleStatus();
 
     const intervalMs = isRunning ? 1000 : 5000;
     const interval = setInterval(() => {
@@ -317,6 +360,19 @@ export default function Home() {
     }, intervalMs);
 
     return () => clearInterval(interval);
+  }, [isRunning]);
+
+  // 리뷰 작업 종료 시점에 전체 리프레시 (isRunning: true → false 전환 감지)
+  const prevIsRunningRef = useRef(isRunning);
+  useEffect(() => {
+    if (prevIsRunningRef.current === true && isRunning === false) {
+      fetchStatus();
+      fetchRecentJobs();
+      fetchCompanies();
+      fetchStatistics();
+      fetchScheduleStatus();
+    }
+    prevIsRunningRef.current = isRunning;
   }, [isRunning]);
 
   // 상태에 따른 표시 텍스트
@@ -504,6 +560,7 @@ export default function Home() {
                 fetchRecentJobs();
                 fetchCompanies();
                 fetchStatistics();
+                fetchScheduleStatus();
               }}
               disabled={loading}
               className={`${styles.button} ${styles.buttonRefresh}`}
@@ -511,11 +568,35 @@ export default function Home() {
               새로고침
             </button>
           </div>
+          {/* 반복 실행 제어 */}
+          <div className={styles.filterSection} style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+            <label className={styles.filterLabel}>반복 실행 (매주 일요일 오전 2시):</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+              <span style={{ color: scheduleEnabled ? '#4CAF50' : '#666', fontWeight: 500 }}>
+                {scheduleEnabled ? '활성화됨' : '비활성화됨'}
+              </span>
+              <button
+                type="button"
+                onClick={handleToggleSchedule}
+                disabled={scheduleLoading || loading}
+                className={`${styles.button} ${scheduleEnabled ? styles.buttonStop : styles.buttonPrimary}`}
+                style={{ padding: '6px 16px', fontSize: 14 }}
+              >
+                {scheduleLoading ? '처리 중...' : scheduleEnabled ? '반복 실행 끄기' : '반복 실행 켜기'}
+              </button>
+            </div>
+            <p className={styles.filterDescription} style={{ marginTop: 8, marginBottom: 0 }}>
+              {scheduleEnabled
+                ? '매주 일요일 오전 2시에 자동으로 스크래핑이 실행됩니다.'
+                : '반복 실행이 꺼져 있습니다. "반복 실행 켜기"를 누르면 다시 활성화됩니다.'}
+            </p>
+          </div>
+
           <div className={styles.infoBox}>
             <p className={styles.infoText}>
               💡 <strong>지금 실행</strong> 버튼을 클릭하면 설정한 조건(기간, 기업)에 따라 즉시 스크래핑을 시작합니다.
               <br />
-              자동 스케줄(매주 월요일 오전 2시)과는 별개로 수동으로 실행할 수 있습니다.
+              자동 스케줄(매주 일요일 오전 2시)과는 별개로 수동으로 실행할 수 있습니다.
             </p>
           </div>
           {message && (

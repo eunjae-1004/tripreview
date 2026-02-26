@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import cron from 'node-cron';
 import adminRoutes from './routes/admin.js';
 import jobService from './services/jobService.js';
+import { initSchedule } from './services/scheduleService.js';
 
 dotenv.config();
 
@@ -74,23 +74,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// 매주 월요일 새벽 2시에 자동 실행
-// cron 표현식: 분 시 일 월 요일
-// 0 2 * * 1 = 매주 월요일 오전 2시
-cron.schedule('0 2 * * 1', async () => {
-  console.log('스케줄된 스크래핑 작업 시작:', new Date());
-  
-  if (!jobService.getIsRunning()) {
-    try {
-      await jobService.runScrapingJob();
-      console.log('스케줄된 스크래핑 작업 완료');
-    } catch (error) {
-      console.error('스케줄된 스크래핑 작업 실패:', error);
-    }
-  } else {
-    console.log('이미 실행 중인 작업이 있어 스케줄 작업을 건너뜁니다.');
-  }
-});
+// 매주 일요일 새벽 2시 자동 실행 (scheduleService에서 제어)
+initSchedule();
 
 // 서버 시작
 let serverReady = false;
@@ -100,7 +85,7 @@ console.log(`[서버 시작] 포트 ${PORT}에서 서버 시작 시도 중...`);
 const server = app.listen(PORT, '0.0.0.0', () => {
   serverReady = true;
   console.log(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
-  console.log(`📅 스케줄: 매주 월요일 오전 2시 자동 실행`);
+  console.log(`📅 스케줄: 매주 일요일 오전 2시 자동 실행`);
   console.log(`🏥 Health check: http://0.0.0.0:${PORT}/health`);
   console.log(`🌐 서버 준비 완료 - 요청 대기 중...`);
   

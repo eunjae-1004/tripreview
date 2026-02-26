@@ -27,7 +27,7 @@ tripreview/
 - Express.js - RESTful API 서버
 - PostgreSQL - 관계형 데이터베이스
 - Playwright - 웹 스크래핑
-- node-cron - 스케줄링 (매주 월요일 새벽 2시)
+- node-cron - 스케줄링 (매주 일요일 새벽 2시)
 
 ### Client
 - Next.js 14 - React 프레임워크
@@ -188,7 +188,7 @@ npm run dev
 
 ## 기능
 
-- ✅ 매주 월요일 새벽 2시 자동 스크래핑
+- ✅ 매주 일요일 새벽 2시 자동 스크래핑
 - ✅ 관리자 페이지에서 수동 실행/중지 가능
 - ✅ 스크래핑 진행 상황 실시간 확인
 - ✅ 작업 이력 조회

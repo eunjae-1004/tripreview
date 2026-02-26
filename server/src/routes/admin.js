@@ -1,5 +1,6 @@
 import express from 'express';
 import jobService from '../services/jobService.js';
+import { getScheduleStatus, setScheduleEnabled } from '../services/scheduleService.js';
 
 const router = express.Router();
 
@@ -128,6 +129,37 @@ router.post('/jobs/continue', (req, res) => {
   try {
     jobService.continueFromBreakpoint();
     res.json({ message: '다음 단계로 진행합니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 스케줄 상태 조회 (매주 일요일 2시 자동 실행)
+ */
+router.get('/schedule/status', (req, res) => {
+  try {
+    const status = getScheduleStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 스케줄 활성화/비활성화
+ */
+router.put('/schedule', (req, res) => {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'enabled는 boolean이어야 합니다.' });
+    }
+    const result = setScheduleEnabled(enabled);
+    res.json({
+      enabled: result.enabled,
+      message: result.enabled ? '반복 실행이 활성화되었습니다.' : '반복 실행이 비활성화되었습니다.',
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
