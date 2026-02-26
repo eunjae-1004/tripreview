@@ -213,7 +213,7 @@ class ScraperService {
           visit_keyword, review_keyword, visit_type, emotion, revisit_flag,
           n_rating, n_emotion, n_char_count, title, additional_info
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-        ON CONFLICT (company_name, review_date, nickname, portal_url) DO NOTHING`,
+        ON CONFLICT (company_name, nickname, portal_url, (COALESCE(LEFT(content, 2000), ''))) DO NOTHING`,
         [
           portalUrl,
           companyName,
@@ -235,11 +235,12 @@ class ScraperService {
       );
       // rowCount가 1이면 새로 삽입됨, 0이면 중복으로 인해 삽입되지 않음
       if (result.rowCount === 0) {
-        // 중복 확인을 위해 실제 DB에서 확인
+        // 중복 확인을 위해 실제 DB에서 확인 (company_name, nickname, portal_url, content 앞 2000자)
+        const contentKey = typeof content === 'string' ? content.slice(0, 2000) : '';
         const checkResult = await pool.query(
           `SELECT id FROM reviews 
-           WHERE company_name = $1 AND review_date = $2 AND nickname = $3 AND portal_url = $4`,
-          [companyName, reviewDateStr, nickname, portalUrl]
+           WHERE company_name = $1 AND nickname = $2 AND portal_url = $3 AND COALESCE(LEFT(content, 2000), '') = COALESCE($4, '')`,
+          [companyName, nickname, portalUrl, contentKey]
         );
         if (checkResult.rows.length > 0) {
           // 실제로 중복인 경우
@@ -383,6 +384,26 @@ class ScraperService {
       nEmotion: emotion,
       nCharCount: charCount,
     };
+  }
+
+  /**
+   * 네이버맵 리뷰 content에서 순수 본문만 추출
+   * - "별점N점" 이전: 작성자, 팔로우 등 (제거)
+   * - "반응 남기기" 이후: 방문일, 인증수단 등 (제거)
+   */
+  extractNaverMapReviewContent(raw) {
+    if (!raw || typeof raw !== 'string') return raw || '';
+    let s = raw.trim();
+    // 1. "별점N점" (별점5점, 별점 4.5점 등) 이전 내용 제거
+    const starMatch = s.match(/별점\s*\d+(\.\d+)?\s*점/);
+    if (starMatch) {
+      const idx = s.indexOf(starMatch[0]) + starMatch[0].length;
+      s = s.slice(idx).trim();
+    }
+    // 2. "반응 남기기" (또는 "반응 나기기") 이후 내용 제거
+    const reactIdx = s.search(/반응\s*[남나]기기/);
+    if (reactIdx >= 0) s = s.slice(0, reactIdx).trim();
+    return s.replace(/\s+/g, ' ').trim();
   }
 
   /**
@@ -753,6 +774,7 @@ class ScraperService {
                 if (await contentEl.count() > 0) content = (await contentEl.textContent().catch(() => '') || '').trim();
               } catch (_) {}
               if (!content) content = allText.replace(/\s+/g, ' ').trim().slice(0, 2000);
+              content = this.extractNaverMapReviewContent(content);
 
               const revisitMatch = allText.match(/(\d+)번째\s*방문/);
               const revisitFlag = !!revisitMatch;
@@ -993,7 +1015,10 @@ class ScraperService {
 
         return results;
       });
-      if (reviews.length > 0) console.log(`[네이버맵] evaluate 방식 추출: ${reviews.length}개`);
+      if (reviews.length > 0) {
+        reviews = reviews.map(r => ({ ...r, content: this.extractNaverMapReviewContent(r.content || '') }));
+        console.log(`[네이버맵] evaluate 방식 추출: ${reviews.length}개`);
+      }
       } else {
         // frame.evaluate를 사용할 수 없는 경우, locator를 사용하여 직접 추출
         console.log('⚠️ frame.evaluate를 사용할 수 없습니다. locator 방식으로 리뷰 추출 시도합니다.');
@@ -1669,6 +1694,7 @@ class ScraperService {
                 // 리뷰 내용 찾기 실패
                 console.log(`리뷰 ${i + 1} 내용 추출 실패: ${e.message}`);
               }
+              content = this.extractNaverMapReviewContent(content);
               
               // review_keyword 추출 (사용자 제공 선택자 사용)
               // 선택자: #_review_list > li:nth-child(4) > div.pui__HLNvmI > span:nth-child(1), span:nth-child(2) 등

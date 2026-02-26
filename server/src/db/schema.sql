@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   n_char_count INTEGER, -- 종합 분석 글자수
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  -- 중복 방지를 위한 유니크 제약조건 (호텔명, 날짜, 닉네임, 포털)
-  UNIQUE(company_name, review_date, nickname, portal_url)
+  -- 중복 방지를 위한 유니크 제약조건 (기업명, 닉네임, 포털, 본문)
+  UNIQUE(company_name, nickname, portal_url, content)
 );
 
 -- 스크래핑 작업 로그 테이블
