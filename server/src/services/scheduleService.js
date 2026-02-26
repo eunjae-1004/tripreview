@@ -9,7 +9,7 @@ let scheduleEnabled = true; // 기본값: 활성화
  */
 export function initSchedule() {
   if (scheduleTask) return;
-  scheduleTask = cron.schedule('0 2 * * 0', async () => {
+  scheduleTask = cron.schedule('*/5 * * * *', async () => {
     if (!scheduleEnabled) {
       console.log('스케줄이 비활성화되어 있어 실행을 건너뜁니다.');
       return;
@@ -34,8 +34,8 @@ export function initSchedule() {
 export function getScheduleStatus() {
   return {
     enabled: scheduleEnabled,
-    cronExpression: '0 2 * * 0',
-    description: '매주 일요일 오전 2시',
+    cronExpression: '*/5 * * * *',
+    description: '5분마다 (테스트용, 원복 필요)',
   };
 }
 
