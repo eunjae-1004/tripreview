@@ -5369,11 +5369,9 @@ class ScraperService {
       reviews = await this.scrapeAgoda(companyName, dateFilter, agodaUrl, jobId, 'agoda', true);
     } else if (portalType === 'naver') {
       // 네이버맵은 companyName으로 검색하여 스크래핑
-      // 즉시 저장 방식으로 변경 (메모리 효율성)
       reviews = await this.scrapeNaverMap(companyName, dateFilter, jobId, 'naver', true);
     } else if (portalUrl && portalUrl.includes('naver.com')) {
       // 네이버맵 URL이 제공된 경우에도 companyName으로 검색 (더보기 버튼 클릭 방식)
-      // 즉시 저장 방식으로 변경 (메모리 효율성)
       reviews = await this.scrapeNaverMap(companyName, dateFilter, jobId, 'naver', true);
     } else if (!portalUrl || portalUrl.includes('kakao.com')) {
       // 카카오맵은 URL이 없어도 companyName으로 검색하여 스크래핑

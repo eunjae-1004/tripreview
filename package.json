@@ -1,5 +1,17 @@
 {
+  "name": "tripreview",
+  "private": true,
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev:local --prefix client",
+    "dev:local": "npm run dev:local --prefix client",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "migrate": "npm run migrate --prefix server",
+    "playwright": "npx playwright install chromium"
+  },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "concurrently": "^8.2.2"
   }
 }
