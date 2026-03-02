@@ -460,16 +460,17 @@ class ScraperService {
   async scrapeNaverMap(companyName, dateFilter = 'week', jobId = null, portalType = 'naver', saveImmediately = false) {
     let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`네이버맵 스크래핑 시작: "${companyName}" 검색 (필터: ${dateFilter}, 즉시 저장: ${saveImmediately ? '활성화' : '비활성화'})`);
+      console.log(`[네이버맵 상세] 스크래핑 시작: "${companyName}" (필터: ${dateFilter}, 즉시저장: ${saveImmediately})`);
       
       // 네이버 검색 페이지로 이동
       const searchUrl = `https://search.naver.com/search.naver?&query=${encodeURIComponent(companyName)}`;
-      console.log(`네이버 검색 페이지로 이동: ${searchUrl}`);
+      console.log(`[네이버맵 상세] 1단계: 검색 페이지 이동 → ${searchUrl}`);
       await this.page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await this.page.waitForTimeout(5000); // 검색 결과 로딩 대기
+      console.log(`[네이버맵 상세] 1단계 완료: 현재 URL=${this.page.url()}`);
       
       // 더보기 버튼 클릭하여 네이버맵 페이지로 이동
-      console.log('더보기 버튼 찾는 중...');
+      console.log(`[네이버맵 상세] 2단계: 더보기 버튼 또는 map.naver.com 링크 찾는 중...`);
       const moreButtonSelector = '#place-main-section-root > section:nth-child(1) > div > div:nth-child(5) > a';
       const moreButton = this.page.locator(moreButtonSelector);
       
@@ -498,10 +499,10 @@ class ScraperService {
             await this.page.goto(naverMapUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await this.page.waitForTimeout(5000);
           } else {
-            console.log(`네이버맵 페이지로 이동 완료: ${currentUrl}`);
+            console.log(`[네이버맵 상세] 2단계 완료: 클릭으로 이동 성공, URL=${currentUrl}`);
           }
         } else {
-          console.log('⚠️ 더보기 버튼의 href를 찾을 수 없습니다. 검색 결과에서 네이버맵 링크를 찾는 중...');
+          console.log(`[네이버맵 상세] 2단계: 더보기 href 없음 → map.naver.com 링크 직접 검색`);
           // 대체 방법: 검색 결과에서 네이버맵 링크 찾기
           const mapLink = await this.page.locator('a[href*="map.naver.com"]').first();
           const mapLinkCount = await mapLink.count();
@@ -518,13 +519,13 @@ class ScraperService {
               await this.page.goto(naverMapUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
               await this.page.waitForTimeout(5000);
             }
-          } else {
-            console.log('⚠️ 네이버맵 링크를 찾을 수 없습니다. 이 기업의 스크래핑을 건너뜁니다.');
+            } else {
+            console.log(`[네이버맵 상세] 2단계 실패: map.naver.com 링크 0개 → 스크래핑 건너뜀`);
             return [];
           }
         }
       } catch (e) {
-        console.log(`⚠️ 더보기 버튼을 찾을 수 없습니다: ${e.message}`);
+        console.log(`[네이버맵 상세] 2단계: 더보기 버튼 예외 (${e.message}) → map 링크 대체 시도`);
         console.log('⚠️ 검색 결과에서 네이버맵 링크를 찾는 중...');
         // 대체 방법: 검색 결과에서 네이버맵 링크 찾기
         const mapLink = await this.page.locator('a[href*="map.naver.com"]').first();
@@ -546,11 +547,12 @@ class ScraperService {
             return [];
           }
         } else {
-          console.log('⚠️ 네이버맵 링크를 찾을 수 없습니다. 이 기업의 스크래핑을 건너뜁니다.');
+          console.log(`[네이버맵 상세] 2단계 실패(캐치): map.naver.com 링크 0개 → 스크래핑 건너뜀`);
           return [];
         }
       }
       
+      console.log(`[네이버맵 상세] 2단계 완료: 네이버맵 페이지 도착, URL=${this.page.url()}`);
       // 네이버맵 페이지 로딩 대기
       await this.page.waitForTimeout(3000);
 
@@ -559,8 +561,10 @@ class ScraperService {
       const iframeLocator = this.page.locator('iframe[title="Naver Place Entry"]');
       
       try {
+        console.log(`[네이버맵 상세] 3단계: iframe[title="Naver Place Entry"] 대기...`);
         await iframeLocator.waitFor({ state: 'attached', timeout: 5000 });
         frame = await iframeLocator.contentFrame();
+        console.log(`[네이버맵 상세] 3단계 완료: iframe 로드됨`);
         
         // 리뷰 탭 클릭 (있는 경우)
         try {
@@ -593,7 +597,7 @@ class ScraperService {
         }
       } catch (e) {
         // iframe이 없으면 메인 페이지에서 진행
-        console.log('iframe을 찾을 수 없습니다. 메인 페이지에서 진행합니다.');
+        console.log(`[네이버맵 상세] 3단계: iframe 없음 (${e.message}) → 메인 페이지(frame=page)로 진행`);
         frame = this.page;
       }
 
@@ -609,9 +613,14 @@ class ScraperService {
           } catch (_) {}
           console.log('[네이버맵] 리뷰 목록 로드 대기 완료');
         } catch (e) {
-          console.log('[네이버맵] 리뷰 목록 대기 타임아웃 또는 미발견:', e.message);
+          console.log(`[네이버맵 상세] 4단계 실패: ul#_review_list 대기 타임아웃/미발견 (${e.message})`);
         }
       }
+      let liCount = 0;
+      try {
+        if (frame && typeof frame.locator === 'function') liCount = await frame.locator('ul#_review_list li').count();
+      } catch (_) {}
+      console.log(`[네이버맵 상세] 4단계: ul#_review_list li 개수=${liCount}`);
 
       // 리뷰 영역 스크롤하여 lazy-load된 항목 로드 (여러 번 스크롤해야 나오는 경우 대비)
       if (frame && typeof frame.evaluate === 'function') {
@@ -667,6 +676,7 @@ class ScraperService {
       }
 
       const useLocatorPath = frame && typeof frame.locator === 'function' && (primaryCount > 0 || fallbackCount > 0);
+      console.log(`[네이버맵 상세] 5단계: useLocatorPath=${useLocatorPath} (primaryCount=${primaryCount}, fallbackCount=${fallbackCount})`);
 
       if (useLocatorPath) {
         // locator 기반 수집 (더보기 클릭 포함)
@@ -942,14 +952,15 @@ class ScraperService {
               break;
             }
           }
-          console.log(`[네이버맵] locator 방식 완료: ${reviews.length}개 추출, ${actualSavedCount}개 저장`);
+          console.log(`[네이버맵 상세] locator 방식 완료: 추출 ${reviews.length}개, 저장 ${actualSavedCount}개`);
         } catch (e) {
-          console.log('[네이버맵] locator 방식 실패:', e.message);
+          console.log(`[네이버맵 상세] locator 방식 예외: ${e.message}`);
         }
       }
 
       // 2순위: locator로 0건이면 evaluate 시도
       if (reviews.length === 0 && frame && typeof frame.evaluate === 'function') {
+        console.log(`[네이버맵 상세] 6단계: evaluate 방식 시도 (locator 0건)`);
         const kstTodayForEval = getKstDateInfo().todayStr;
         reviews = await frame.evaluate((kstToday) => {
         const results = [];
@@ -1049,11 +1060,13 @@ class ScraperService {
       }, kstTodayForEval);
       if (reviews.length > 0) {
         reviews = reviews.map(r => ({ ...r, content: this.extractNaverMapReviewContent(r.content || '') }));
-        console.log(`[네이버맵] evaluate 방식 추출: ${reviews.length}개`);
+        console.log(`[네이버맵 상세] evaluate 방식 완료: ${reviews.length}개 추출`);
+      } else {
+        console.log(`[네이버맵 상세] evaluate 방식: 0건 추출`);
       }
       } else {
-        // frame.evaluate를 사용할 수 없는 경우, locator를 사용하여 직접 추출
-        console.log('⚠️ frame.evaluate를 사용할 수 없습니다. locator 방식으로 리뷰 추출 시도합니다.');
+        // frame.evaluate를 사용할 수 없는 경우, pui locator 방식
+        console.log(`[네이버맵 상세] 7단계: pui locator 방식 시도 (evaluate 불가 또는 locator 실패)`);
         
         try {
           // 날짜 필터링 설정 (한국 시간 KST 기준)
@@ -2026,9 +2039,9 @@ class ScraperService {
         }
       }
 
-      console.log(`✅ 네이버맵 스크래핑 완료: ${reviews.length}개 리뷰 발견`);
+      console.log(`[네이버맵 상세] 최종: ${reviews.length}개 리뷰 추출`);
       if (reviews.length === 0) {
-        console.log('⚠️ 네이버맵에서 리뷰를 찾지 못했습니다. 선택자나 페이지 구조가 변경되었을 수 있습니다.');
+        console.log(`[네이버맵 상세] ⚠️ 리뷰 0건 - 선택자/페이지 구조 확인 필요`);
       }
       
       // 즉시 저장 방식인 경우 실제 저장 개수를 reviews 배열에 메타데이터로 추가
@@ -2040,6 +2053,7 @@ class ScraperService {
       
       return reviews;
     } catch (error) {
+      console.error(`[네이버맵 상세] 예외 발생: ${error?.message || error}`);
       console.error('네이버맵 스크래핑 실패:', error);
       // 디버깅을 위해 스크린샷 저장
       try {
