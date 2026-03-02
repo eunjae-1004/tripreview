@@ -49,6 +49,32 @@ async function translateToKorean(text) {
   return text;
 }
 
+const TZ_KST = 'Asia/Seoul';
+
+/**
+ * 한국 시간(KST) 기준 오늘/필터 날짜 반환
+ * 서버(UTC) 기준이 아닌 사용자 컴퓨터(한국) 시간과 동일하게 맞춤
+ */
+function getKstDateInfo() {
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ_KST, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayStr = fmt.format(now);
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const todayDate = new Date(y, m - 1, d);
+  const weekAgo = new Date(todayDate);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const twoWeeksAgo = new Date(todayDate);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  return {
+    todayStr,
+    todayDate,
+    filterDateWeek: weekAgo.toISOString().slice(0, 10),
+    filterDateTwoWeeks: twoWeeksAgo.toISOString().slice(0, 10),
+    filterDateWeekObj: weekAgo,
+    filterDateTwoWeeksObj: twoWeeksAgo,
+  };
+}
+
 /**
  * 스크래핑 서비스 클래스
  * 각 포털 사이트에서 리뷰 데이터를 수집합니다.
@@ -645,18 +671,15 @@ class ScraperService {
       if (useLocatorPath) {
         // locator 기반 수집 (더보기 클릭 포함)
         try {
+          const kst = getKstDateInfo();
           let filterDate = null;
           let filterDateStr = null;
           if (dateFilter === 'week') {
-            const today = new Date();
-            filterDate = new Date(today);
-            filterDate.setDate(today.getDate() - 7);
-            filterDateStr = filterDate.toISOString().split('T')[0];
+            filterDate = kst.filterDateWeekObj;
+            filterDateStr = kst.filterDateWeek;
           } else if (dateFilter === 'twoWeeks') {
-            const today = new Date();
-            filterDate = new Date(today);
-            filterDate.setDate(today.getDate() - 14);
-            filterDateStr = filterDate.toISOString().split('T')[0];
+            filterDate = kst.filterDateTwoWeeksObj;
+            filterDateStr = kst.filterDateTwoWeeks;
           }
           let naverNoDateSkipCount = 0;
           let processedReviewIndex = 0;
@@ -709,8 +732,7 @@ class ScraperService {
                 if (await timeEl.count() > 0) {
                   const dateText = await timeEl.textContent().catch(() => '') || '';
                   const t = String(dateText).trim();
-                  const now = new Date();
-                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const today = getKstDateInfo().todayDate;
                   if (t.includes('오늘')) reviewDate = today.toISOString().split('T')[0];
                   else if (t.includes('어제')) { const d = new Date(today); d.setDate(d.getDate() - 1); reviewDate = d.toISOString().split('T')[0]; }
                   else {
@@ -761,7 +783,7 @@ class ScraperService {
                 if (!reviewDate) {
                   const m = allText.match(/(\d{1,2})\.(\d{1,2})\.(월|화|수|목|금|토|일)/);
                   if (m) {
-                    const y = new Date().getFullYear();
+                    const y = getKstDateInfo().todayDate.getFullYear();
                     reviewDate = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
                   }
                 }
@@ -780,7 +802,7 @@ class ScraperService {
               const revisitFlag = !!revisitMatch;
 
               if (content || rating > 0) {
-                const item = { content, rating, nickname, date: reviewDate || new Date().toISOString().split('T')[0], visitKeyword: null, reviewKeyword: null, visitType: null, emotion: null, revisitFlag };
+                const item = { content, rating, nickname, date: reviewDate || getKstDateInfo().todayStr, visitKeyword: null, reviewKeyword: null, visitType: null, emotion: null, revisitFlag };
                 reviews.push(item);
                 if (saveImmediately && jobId && companyName && reviewDate && !skippedNoDate) {
                   const saved = await this.saveReview({ portalUrl: '네이버맵', companyName, reviewDate, content, rating, nickname, revisitFlag, nRating: null, nEmotion: null, nCharCount: null, title: null, additionalInfo: null });
@@ -919,7 +941,8 @@ class ScraperService {
 
       // 2순위: locator로 0건이면 evaluate 시도
       if (reviews.length === 0 && frame && typeof frame.evaluate === 'function') {
-        reviews = await frame.evaluate(() => {
+        const kstTodayForEval = getKstDateInfo().todayStr;
+        reviews = await frame.evaluate((kstToday) => {
         const results = [];
         const selectors = [
           'ul#_review_list > li.place_apply_pui',
@@ -961,9 +984,9 @@ class ScraperService {
             const nicknameEl = el.querySelector('[class*="name"], [class*="user"], [class*="author"], .nickname, [data-testid*="user-name"]');
             const nickname = nicknameEl ? nicknameEl.textContent.trim() : `사용자${index + 1}`;
 
-            // 날짜 찾기
+            // 날짜 찾기 (기본값: KST 오늘)
             const dateEl = el.querySelector('[class*="date"], [class*="time"], .date, .time, [data-testid*="date"]');
-            let date = new Date().toISOString().split('T')[0];
+            let date = kstToday;
             if (dateEl) {
               const dateText = dateEl.textContent.trim();
               // 날짜 파싱 (예: "2024.01.15", "25.12.5.금", "1개월 전" 등)
@@ -1014,7 +1037,7 @@ class ScraperService {
         });
 
         return results;
-      });
+      }, kstTodayForEval);
       if (reviews.length > 0) {
         reviews = reviews.map(r => ({ ...r, content: this.extractNaverMapReviewContent(r.content || '') }));
         console.log(`[네이버맵] evaluate 방식 추출: ${reviews.length}개`);
@@ -1024,26 +1047,19 @@ class ScraperService {
         console.log('⚠️ frame.evaluate를 사용할 수 없습니다. locator 방식으로 리뷰 추출 시도합니다.');
         
         try {
-          // 날짜 필터링 설정
+          // 날짜 필터링 설정 (한국 시간 KST 기준)
+          const kst = getKstDateInfo();
           let filterDate = null;
           let filterDateStr = null;
-          
           if (dateFilter === 'week') {
-            // 오늘 기준 일주일 전까지
-            const today = new Date();
-            filterDate = new Date(today);
-            filterDate.setDate(today.getDate() - 7);
-            filterDateStr = filterDate.toISOString().split('T')[0];
-            console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+            filterDate = kst.filterDateWeekObj;
+            filterDateStr = kst.filterDateWeek;
+            console.log(`날짜 필터 (KST): ${filterDateStr} ~ ${kst.todayStr}`);
           } else if (dateFilter === 'twoWeeks') {
-            // 오늘 기준 2주 전까지
-            const today = new Date();
-            filterDate = new Date(today);
-            filterDate.setDate(today.getDate() - 14);
-            filterDateStr = filterDate.toISOString().split('T')[0];
-            console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+            filterDate = kst.filterDateTwoWeeksObj;
+            filterDateStr = kst.filterDateTwoWeeks;
+            console.log(`날짜 필터 (KST): ${filterDateStr} ~ ${kst.todayStr}`);
           } else {
-            // 전체 리뷰 (필터링 없음)
             console.log('날짜 필터: 전체 (필터링 없음)');
           }
           
@@ -1173,8 +1189,7 @@ class ScraperService {
                 // "방문일", "작성일" 같은 접두사 제거
                 t = t.replace(/^(방문일|작성일|리뷰일)\s*:?\s*/i, '').trim();
 
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const today = getKstDateInfo().todayDate;
 
                 // 상대 표현: 오늘/어제 (공백 무시)
                 if (t.includes('오늘')) {
@@ -1522,12 +1537,12 @@ class ScraperService {
                 console.log(`[네이버맵] 날짜 추출 중 에러 (무시): ${e.message}`);
               }
               
-              // 날짜가 없으면 오늘 날짜로 설정 (즉시 저장 방식에서는 저장하도록)
+              // 날짜가 없으면 오늘 날짜로 설정 (즉시 저장 방식에서는 저장하도록, KST)
               if (!date) {
                 if (saveImmediately) {
                   // 즉시 저장 방식에서는 날짜가 없어도 저장 (오늘 날짜로)
-                  date = new Date().toISOString().split('T')[0];
-                  reviewDate = new Date();
+                  date = getKstDateInfo().todayStr;
+                  reviewDate = new Date(date);
                   if (i < 5) {
                     console.log(`[네이버맵] 날짜 없음 - 오늘 날짜로 저장: nickname="${nickname}"`);
                   }
@@ -1557,10 +1572,10 @@ class ScraperService {
                 continue;
               }
               
-              // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
+              // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링 (KST 기준)
               // 최신순으로 정렬되어 있으므로, 필터 범위를 벗어난 날짜를 만나면 이후 모든 리뷰도 범위를 벗어남
-              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate) {
-                if (reviewDate < filterDate) {
+              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDateStr && date) {
+                if (date < filterDateStr) {
                   // 필터 범위를 벗어난 날짜를 만남
                   console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
                   console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
@@ -1808,10 +1823,11 @@ class ScraperService {
                   }
                   
                   try {
-                    // 날짜 필터링 확인
+                    // 날짜 필터링 확인 (KST 기준)
                     let shouldSave = true;
-                    if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate && filterDate) {
-                      if (reviewDate < filterDate) {
+                    const dateStrForFilter = typeof date === 'string' ? date : (date instanceof Date ? date.toISOString().slice(0, 10) : null);
+                    if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && dateStrForFilter && filterDateStr) {
+                      if (dateStrForFilter < filterDateStr) {
                         // 필터 범위를 벗어난 날짜를 만남
                         console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
                         console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
@@ -2178,21 +2194,14 @@ class ScraperService {
       console.log(`후기 페이지로 이동 완료: ${currentUrl}`);
 
       // 날짜 필터링 설정
-      let filterDate = null;
+      const kst = getKstDateInfo();
       let filterDateStr = null;
-      
       if (dateFilter === 'week') {
-        const today = new Date();
-        filterDate = new Date(today);
-        filterDate.setDate(today.getDate() - 7);
-        filterDateStr = filterDate.toISOString().split('T')[0];
-        console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+        filterDateStr = kst.filterDateWeek;
+        console.log(`날짜 필터 (KST): ${filterDateStr} ~ ${kst.todayStr}`);
       } else if (dateFilter === 'twoWeeks') {
-        const today = new Date();
-        filterDate = new Date(today);
-        filterDate.setDate(today.getDate() - 14);
-        filterDateStr = filterDate.toISOString().split('T')[0];
-        console.log(`날짜 필터: ${filterDateStr} ~ ${today.toISOString().split('T')[0]}`);
+        filterDateStr = kst.filterDateTwoWeeks;
+        console.log(`날짜 필터 (KST): ${filterDateStr} ~ ${kst.todayStr}`);
       } else {
         console.log('날짜 필터: 전체 (필터링 없음)');
       }
@@ -2328,14 +2337,14 @@ class ScraperService {
               // 날짜 찾기 실패
             }
             
-            // 날짜가 없으면 오늘 날짜 사용
+            // 날짜가 없으면 오늘 날짜 사용 (KST)
             if (!date) {
-              date = new Date().toISOString().split('T')[0];
-              reviewDate = new Date();
+              date = getKstDateInfo().todayStr;
+              reviewDate = new Date(date);
             }
             
-            // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
-            if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDate && reviewDate < filterDate) {
+            // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링 (KST 기준)
+            if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDateStr && date && date < filterDateStr) {
               continue;
             }
             
@@ -2434,21 +2443,18 @@ class ScraperService {
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
               if (saveImmediately && companyName) {
-                // date가 없어도 저장 시도
+                // date가 없어도 저장 시도 (KST 오늘 사용)
                 if (!date) {
-                  date = new Date().toISOString().split('T')[0];
-                  reviewDate = new Date();
+                  date = getKstDateInfo().todayStr;
+                  reviewDate = new Date(date);
                 }
                 try {
-                  // 날짜 필터링 확인
+                  // 날짜 필터링 확인 (KST 기준)
                   let shouldSave = true;
-                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
-                    const today = new Date();
-                    const filterDate = new Date(today);
-                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
-                    if (reviewDate < filterDate) {
-                      shouldSave = false;
-                    }
+                  const kstFilter = getKstDateInfo();
+                  const filterStr = dateFilter === 'week' ? kstFilter.filterDateWeek : (dateFilter === 'twoWeeks' ? kstFilter.filterDateTwoWeeks : null);
+                  if (filterStr && date && date < filterStr) {
+                    shouldSave = false;
                   }
                   
                   if (shouldSave) {
@@ -2959,18 +2965,15 @@ class ScraperService {
             
             // 날짜가 없으면 오늘 날짜 사용
             if (!date) {
-              date = new Date().toISOString().split('T')[0];
-              reviewDate = new Date();
+              date = getKstDateInfo().todayStr;
+              reviewDate = new Date(date);
             }
             
-            // 날짜 필터링
-            if (dateFilter === 'week') {
-              const today = new Date();
-              const oneWeekAgo = new Date(today);
-              oneWeekAgo.setDate(today.getDate() - 7);
-              if (reviewDate && reviewDate < oneWeekAgo) {
-                continue;
-              }
+            // 날짜 필터링 (KST 기준)
+            const kstY = getKstDateInfo();
+            const yFilterStr = dateFilter === 'week' ? kstY.filterDateWeek : (dateFilter === 'twoWeeks' ? kstY.filterDateTwoWeeks : null);
+            if (yFilterStr && date && date < yFilterStr) {
+              continue;
             }
             
             // content 추출 (더보기 버튼 클릭 필요)
@@ -3137,21 +3140,18 @@ class ScraperService {
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
               if (saveImmediately && companyName) {
-                // date가 없어도 저장 시도
+                // date가 없어도 저장 시도 (KST 오늘 사용)
                 if (!date) {
-                  date = new Date().toISOString().split('T')[0];
-                  reviewDate = new Date();
+                  date = getKstDateInfo().todayStr;
+                  reviewDate = new Date(date);
                 }
                 try {
-                  // 날짜 필터링 확인
+                  // 날짜 필터링 확인 (KST 기준)
                   let shouldSave = true;
-                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
-                    const today = new Date();
-                    const filterDate = new Date(today);
-                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
-                    if (reviewDate < filterDate) {
-                      shouldSave = false;
-                    }
+                  const kstFilter = getKstDateInfo();
+                  const filterStr = dateFilter === 'week' ? kstFilter.filterDateWeek : (dateFilter === 'twoWeeks' ? kstFilter.filterDateTwoWeeks : null);
+                  if (filterStr && date && date < filterStr) {
+                    shouldSave = false;
                   }
                   
                   if (shouldSave) {
@@ -4193,18 +4193,15 @@ class ScraperService {
             } catch (e) {}
             
             if (!date) {
-              date = new Date().toISOString().split('T')[0];
-              reviewDate = new Date();
+              date = getKstDateInfo().todayStr;
+              reviewDate = new Date(date);
             }
             
-            // 날짜 필터링 (2주 전까지)
-            if (dateFilter === 'week' || dateFilter === '2weeks') {
-              const today = new Date();
-              const twoWeeksAgo = new Date(today);
-              twoWeeksAgo.setDate(today.getDate() - 14);
-              if (reviewDate && reviewDate < twoWeeksAgo) {
-                continue;
-              }
+            // 날짜 필터링 (KST 기준, 2주 전까지)
+            const kstA = getKstDateInfo();
+            const aFilterStr = (dateFilter === 'week' || dateFilter === '2weeks') ? (dateFilter === 'week' ? kstA.filterDateWeek : kstA.filterDateTwoWeeks) : null;
+            if (aFilterStr && date && date < aFilterStr) {
+              continue;
             }
             
             // 리뷰 데이터 추가
@@ -4225,21 +4222,18 @@ class ScraperService {
               
               // 즉시 저장 방식이 활성화된 경우 즉시 저장
               if (saveImmediately && companyName) {
-                // date가 없어도 저장 시도
+                // date가 없어도 저장 시도 (KST 오늘 사용)
                 if (!date) {
-                  date = new Date().toISOString().split('T')[0];
-                  reviewDate = new Date();
+                  date = getKstDateInfo().todayStr;
+                  reviewDate = new Date(date);
                 }
                 try {
-                  // 날짜 필터링 확인
+                  // 날짜 필터링 확인 (KST 기준)
                   let shouldSave = true;
-                  if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && reviewDate) {
-                    const today = new Date();
-                    const filterDate = new Date(today);
-                    filterDate.setDate(today.getDate() - (dateFilter === 'week' ? 7 : 14));
-                    if (reviewDate < filterDate) {
-                      shouldSave = false;
-                    }
+                  const kstFilter = getKstDateInfo();
+                  const filterStr = dateFilter === 'week' ? kstFilter.filterDateWeek : (dateFilter === 'twoWeeks' ? kstFilter.filterDateTwoWeeks : null);
+                  if (filterStr && date && date < filterStr) {
+                    shouldSave = false;
                   }
                   
                   if (shouldSave) {
@@ -5073,7 +5067,7 @@ class ScraperService {
               }
               
               if (daysAgo > 0) {
-                const today = new Date();
+                const today = getKstDateInfo().todayDate;
                 const reviewDateObj = new Date(today);
                 // 단위별로 정확히 변환 (달/년은 setMonth/setFullYear 사용)
                 if (dateUnit === 'month' && dateUnitValue > 0) {
@@ -5101,9 +5095,9 @@ class ScraperService {
             }
           }
 
-          // 날짜를 찾지 못한 경우: 리뷰 기간 제어와 무관하게 항상 오늘 날짜로 수집(건너뛰지 않음). 기간 필터는 아래 isPeriodFilter에서만 적용
+          // 날짜를 찾지 못한 경우: 리뷰 기간 제어와 무관하게 항상 오늘 날짜로 수집(건너뛰지 않음). 기간 필터는 아래 isPeriodFilter에서만 적용 (KST)
           if (!date) {
-            date = new Date().toISOString().split('T')[0];
+            date = getKstDateInfo().todayStr;
             reviewDate = new Date(date);
             if (i < 5) {
               console.log(`[디버깅] 리뷰 ${i + 1} 날짜 없음 → 오늘 날짜로 수집: ${date}`);
@@ -5181,12 +5175,11 @@ class ScraperService {
           // 날짜 필터링: '전체'(all)일 때는 절대 적용 안 함. 일주일/2주 선택 시 기준일 이전 리뷰는 이 건만 건너뛰고, 이번 배치의 나머지(위쪽 최신 리뷰)는 계속 저장
           const isPeriodFilter = (effectiveDateFilter !== 'all' && (effectiveDateFilter === 'week' || effectiveDateFilter === '2weeks' || effectiveDateFilter === 'twoWeeks'));
           if (isPeriodFilter) {
-            const today = new Date();
-            const daysAgo = (effectiveDateFilter === 'week') ? 7 : 14;
-            const cutoff = new Date(today);
-            cutoff.setDate(today.getDate() - daysAgo);
-            if (reviewDate && reviewDate < cutoff) {
-              console.log(`[구글] 최신순 기준 - ${daysAgo}일 이전 리뷰 (${date}) 건너뜀. 이번 배치 나머지(기준일 이내) 계속 수집.`);
+            const kstG = getKstDateInfo();
+            const cutoffStr = (effectiveDateFilter === 'week') ? kstG.filterDateWeek : kstG.filterDateTwoWeeks;
+            if (date && date < cutoffStr) {
+              const daysLabel = (effectiveDateFilter === 'week') ? 7 : 14;
+              console.log(`[구글] 최신순 기준 - ${daysLabel}일 이전 리뷰 (${date}) 건너뜀. 이번 배치 나머지(기준일 이내) 계속 수집. (KST)`);
               dateFilterStopRequested = true;
               continue;
             }
@@ -5400,17 +5393,11 @@ class ScraperService {
     }
 
     // 수집한 리뷰 데이터를 DB 형식에 맞게 변환
-    // 날짜 필터링 설정
-    let filterDate = null;
-    if (dateFilter === 'week') {
-      const today = new Date();
-      filterDate = new Date(today);
-      filterDate.setDate(today.getDate() - 7);
-    } else if (dateFilter === 'twoWeeks') {
-      const today = new Date();
-      filterDate = new Date(today);
-      filterDate.setDate(today.getDate() - 14);
-    }
+    // 날짜 필터링 설정 (KST 기준)
+    const kstSave = getKstDateInfo();
+    let filterDateStr = null;
+    if (dateFilter === 'week') filterDateStr = kstSave.filterDateWeek;
+    else if (dateFilter === 'twoWeeks') filterDateStr = kstSave.filterDateTwoWeeks;
     
     let savedCount = 0;
     let filteredCount = 0; // 날짜 필터링으로 제외된 개수
@@ -5528,10 +5515,10 @@ class ScraperService {
       }
 
       // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링
-      if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDate && reviewDateObj < filterDate) {
+      if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDateStr && reviewDateStr < filterDateStr) {
         filteredCount++;
         if (filteredCount <= 10) {
-          console.log(`⚠️ [저장] 날짜 필터링으로 제외 (${filteredCount}번째): nickname="${review.nickname}", date="${reviewDateStr}" (필터 기준: ${filterDate.toISOString().split('T')[0]} 이후)`);
+          console.log(`⚠️ [저장] 날짜 필터링으로 제외 (${filteredCount}번째): nickname="${review.nickname}", date="${reviewDateStr}" (필터 기준 KST: ${filterDateStr} 이후)`);
         }
         continue;
       }

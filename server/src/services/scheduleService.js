@@ -25,7 +25,7 @@ export function initSchedule() {
     } else {
       console.log('이미 실행 중인 작업이 있어 스케줄 작업을 건너뜁니다.');
     }
-  }, { scheduled: scheduleEnabled });
+  }, { scheduled: scheduleEnabled, timezone: 'Asia/Seoul' });
 }
 
 /**
@@ -35,7 +35,7 @@ export function getScheduleStatus() {
   return {
     enabled: scheduleEnabled,
     cronExpression: '0 2 * * 0',
-    description: '매주 일요일 오전 2시',
+    description: '매주 일요일 새벽 2시 (한국 시간 KST)',
   };
 }
 

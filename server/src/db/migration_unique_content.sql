@@ -1,7 +1,9 @@
 -- UNIQUE 제약조건 수정: review_date 제거, content 추가
 -- (company_name, review_date, nickname, portal_url) → (company_name, nickname, portal_url, content)
 
--- 기존 UNIQUE 제약조건 삭제
+-- 기존 UNIQUE 제약조건 삭제 (명시적 + 동적)
+ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_company_date_nickname_portal_unique;
+ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_company_name_review_date_nickname_portal_url_key;
 DO $$
 DECLARE
     constraint_name TEXT;
