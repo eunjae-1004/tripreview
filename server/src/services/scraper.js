@@ -60,16 +60,18 @@ function getKstDateInfo() {
   const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ_KST, year: 'numeric', month: '2-digit', day: '2-digit' });
   const todayStr = fmt.format(now);
   const [y, m, d] = todayStr.split('-').map(Number);
-  const todayDate = new Date(y, m - 1, d);
+  const todayDate = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
   const weekAgo = new Date(todayDate);
-  weekAgo.setDate(weekAgo.getDate() - 7);
+  weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
   const twoWeeksAgo = new Date(todayDate);
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 14);
+  const filterDateWeek = fmt.format(weekAgo);
+  const filterDateTwoWeeks = fmt.format(twoWeeksAgo);
   return {
     todayStr,
     todayDate,
-    filterDateWeek: weekAgo.toISOString().slice(0, 10),
-    filterDateTwoWeeks: twoWeeksAgo.toISOString().slice(0, 10),
+    filterDateWeek,
+    filterDateTwoWeeks,
     filterDateWeekObj: weekAgo,
     filterDateTwoWeeksObj: twoWeeksAgo,
   };
@@ -460,7 +462,8 @@ class ScraperService {
   async scrapeNaverMap(companyName, dateFilter = 'week', jobId = null, portalType = 'naver', saveImmediately = false) {
     let actualSavedCount = 0; // 실제 저장 성공 개수 추적
     try {
-      console.log(`[네이버맵 상세] 스크래핑 시작: "${companyName}" (필터: ${dateFilter}, 즉시저장: ${saveImmediately})`);
+      const kstStart = getKstDateInfo();
+      console.log(`[네이버맵 상세] 스크래핑 시작: "${companyName}" (필터: ${dateFilter}, KST오늘: ${kstStart.todayStr}, week기준: ${kstStart.filterDateWeek})`);
       
       // 네이버 검색 페이지로 이동
       const searchUrl = `https://search.naver.com/search.naver?&query=${encodeURIComponent(companyName)}`;
