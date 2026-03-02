@@ -469,87 +469,54 @@ class ScraperService {
       await this.page.waitForTimeout(5000); // 검색 결과 로딩 대기
       console.log(`[네이버맵 상세] 1단계 완료: 현재 URL=${this.page.url()}`);
       
-      // 더보기 버튼 클릭하여 네이버맵 페이지로 이동
-      console.log(`[네이버맵 상세] 2단계: 더보기 버튼 또는 map.naver.com 링크 찾는 중...`);
-      const moreButtonSelector = '#place-main-section-root > section:nth-child(1) > div > div:nth-child(5) > a';
-      const moreButton = this.page.locator(moreButtonSelector);
-      
-      try {
-        await moreButton.waitFor({ state: 'visible', timeout: 10000 });
-        const buttonHref = await moreButton.getAttribute('href').catch(() => null);
-        
-        if (buttonHref) {
-          // 상대 경로인 경우 절대 경로로 변환
-          let naverMapUrl = buttonHref;
-          if (buttonHref.startsWith('/')) {
-            naverMapUrl = `https://map.naver.com${buttonHref}`;
-          } else if (!buttonHref.startsWith('http')) {
-            naverMapUrl = `https://map.naver.com/${buttonHref}`;
-          }
-          
-          console.log(`더보기 버튼 클릭하여 네이버맵 페이지로 이동: ${naverMapUrl}`);
-          await moreButton.click({ timeout: 5000 });
-          await this.page.waitForTimeout(3000); // 페이지 이동 대기
-          
-          // URL이 변경되었는지 확인
-          const currentUrl = this.page.url();
-          if (!currentUrl.includes('map.naver.com')) {
-            // 클릭으로 이동하지 않은 경우 직접 이동
-            console.log(`클릭으로 이동하지 않아 직접 이동: ${naverMapUrl}`);
-            await this.page.goto(naverMapUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-            await this.page.waitForTimeout(5000);
-          } else {
-            console.log(`[네이버맵 상세] 2단계 완료: 클릭으로 이동 성공, URL=${currentUrl}`);
-          }
-        } else {
-          console.log(`[네이버맵 상세] 2단계: 더보기 href 없음 → map.naver.com 링크 직접 검색`);
-          // 대체 방법: 검색 결과에서 네이버맵 링크 찾기
-          const mapLink = await this.page.locator('a[href*="map.naver.com"]').first();
-          const mapLinkCount = await mapLink.count();
-          if (mapLinkCount > 0) {
-            const mapUrl = await mapLink.getAttribute('href');
-            if (mapUrl) {
-              let naverMapUrl = mapUrl;
-              if (mapUrl.startsWith('/')) {
-                naverMapUrl = `https://map.naver.com${mapUrl}`;
-              } else if (!mapUrl.startsWith('http')) {
-                naverMapUrl = `https://map.naver.com/${mapUrl}`;
+      // 2단계: map.naver.com 링크 우선 검색 (선택자 변경에 덜 민감), 없으면 더보기 버튼 시도
+      console.log(`[네이버맵 상세] 2단계: map.naver.com 링크 검색 (우선)...`);
+      let naverMapUrl = null;
+
+      const mapLink = this.page.locator('a[href*="map.naver.com"]').first();
+      const mapLinkCount = await mapLink.count();
+      if (mapLinkCount > 0) {
+        const mapUrl = await mapLink.getAttribute('href').catch(() => null);
+        if (mapUrl) {
+          naverMapUrl = mapUrl.startsWith('/') ? `https://map.naver.com${mapUrl}` : (mapUrl.startsWith('http') ? mapUrl : `https://map.naver.com/${mapUrl}`);
+          console.log(`[네이버맵 상세] 2단계: map 링크 발견 (${mapLinkCount}개) → 이동`);
+        }
+      }
+
+      if (!naverMapUrl) {
+        console.log(`[네이버맵 상세] 2단계: map 링크 없음 → 더보기 버튼 시도`);
+        const moreSelectors = [
+          '#place-main-section-root > section:nth-child(1) > div > div:nth-child(5) > a',
+          '#place-main-section-root a[href*="/place/"]',
+          '#place-main-section-root a[href*="map.naver.com"]',
+        ];
+        for (const sel of moreSelectors) {
+          try {
+            const btn = this.page.locator(sel).first();
+            if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
+              const href = await btn.getAttribute('href').catch(() => null);
+              if (href && (href.includes('map.naver.com') || href.includes('/place/'))) {
+                naverMapUrl = href.startsWith('/') ? `https://map.naver.com${href}` : (href.startsWith('http') ? href : `https://map.naver.com/${href}`);
+                console.log(`[네이버맵 상세] 2단계: 더보기 선택자 성공 (${sel.slice(0, 50)}...)`);
+                break;
               }
-              console.log(`네이버맵 링크 발견, 이동: ${naverMapUrl}`);
-              await this.page.goto(naverMapUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-              await this.page.waitForTimeout(5000);
             }
-            } else {
-            console.log(`[네이버맵 상세] 2단계 실패: map.naver.com 링크 0개 → 스크래핑 건너뜀`);
-            return [];
-          }
+          } catch (_) {}
         }
-      } catch (e) {
-        console.log(`[네이버맵 상세] 2단계: 더보기 버튼 예외 (${e.message}) → map 링크 대체 시도`);
-        console.log('⚠️ 검색 결과에서 네이버맵 링크를 찾는 중...');
-        // 대체 방법: 검색 결과에서 네이버맵 링크 찾기
-        const mapLink = await this.page.locator('a[href*="map.naver.com"]').first();
-        const mapLinkCount = await mapLink.count();
-        if (mapLinkCount > 0) {
-          const mapUrl = await mapLink.getAttribute('href');
-          if (mapUrl) {
-            let naverMapUrl = mapUrl;
-            if (mapUrl.startsWith('/')) {
-              naverMapUrl = `https://map.naver.com${mapUrl}`;
-            } else if (!mapUrl.startsWith('http')) {
-              naverMapUrl = `https://map.naver.com/${mapUrl}`;
-            }
-            console.log(`네이버맵 링크 발견, 이동: ${naverMapUrl}`);
-            await this.page.goto(naverMapUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-            await this.page.waitForTimeout(5000);
-          } else {
-            console.log('⚠️ 네이버맵 링크를 찾을 수 없습니다. 이 기업의 스크래핑을 건너뜁니다.');
-            return [];
-          }
-        } else {
-          console.log(`[네이버맵 상세] 2단계 실패(캐치): map.naver.com 링크 0개 → 스크래핑 건너뜀`);
-          return [];
-        }
+      }
+
+      if (!naverMapUrl) {
+        console.log(`[네이버맵 상세] 2단계 실패: map 링크/더보기 모두 미발견 → 스크래핑 건너뜀`);
+        return [];
+      }
+
+      const currentBefore = this.page.url();
+      if (currentBefore.includes('map.naver.com')) {
+        console.log(`[네이버맵 상세] 2단계: 이미 map 페이지에 있음`);
+      } else {
+        console.log(`[네이버맵 상세] 2단계: 네이버맵 페이지로 이동...`);
+        await this.page.goto(naverMapUrl.replace(/\?.*$/, ''), { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await this.page.waitForTimeout(5000);
       }
       
       console.log(`[네이버맵 상세] 2단계 완료: 네이버맵 페이지 도착, URL=${this.page.url()}`);
