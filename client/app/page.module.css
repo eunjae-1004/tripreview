@@ -326,6 +326,8 @@
   border-radius: 4px;
   color: #C62828;
   margin-top: 8px;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
 }
 
 .empty {

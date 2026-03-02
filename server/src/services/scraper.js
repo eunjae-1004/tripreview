@@ -5450,6 +5450,14 @@ class ScraperService {
              WHERE id = $4`,
             [reviews.length, actualSavedCount, errorCount, jobId]
           );
+          // 오류 건 있으면 상세 기록 (중복 등)
+          if (errorCount > 0) {
+            const line = `\n[${new Date().toISOString()}] ${portalName}: 추출 ${reviews.length}개 중 ${actualSavedCount}개 저장, ${errorCount}건 미저장 (중복/기타)`;
+            await pool.query(
+              `UPDATE scraping_jobs SET error_message = RIGHT(COALESCE(error_message, '') || $1, 8000) WHERE id = $2`,
+              [line, jobId]
+            );
+          }
         } catch (error) {
           console.error('scraping_jobs 업데이트 실패 (즉시 저장):', error);
         }
@@ -5635,8 +5643,22 @@ class ScraperService {
                success_count = success_count + $2,
                error_count = error_count + $3
            WHERE id = $4`,
-          [reviews.length, savedCount, reviews.length - savedCount - emptyContentCount - filteredCount, jobId]
+          [reviews.length, savedCount, Math.max(0, duplicateCount + skippedNoDate), jobId]
         );
+        // 오류/스킵 건 있으면 상세 기록
+        const skipTotal = emptyContentCount + skippedNoDate + filteredCount + duplicateCount;
+        if (skipTotal > 0) {
+          const parts = [];
+          if (duplicateCount > 0) parts.push(`중복 ${duplicateCount}건`);
+          if (skippedNoDate > 0) parts.push(`날짜파싱실패 ${skippedNoDate}건`);
+          if (filteredCount > 0) parts.push(`날짜필터 ${filteredCount}건`);
+          if (emptyContentCount > 0) parts.push(`빈데이터 ${emptyContentCount}건`);
+          const line = `\n[${new Date().toISOString()}] ${portalName} 저장루프: 추출 ${reviews.length}개, 저장 ${savedCount}개, 미저장(${parts.join(', ')})`;
+          await pool.query(
+            `UPDATE scraping_jobs SET error_message = RIGHT(COALESCE(error_message, '') || $1, 8000) WHERE id = $2`,
+            [line, jobId]
+          );
+        }
       } catch (error) {
         console.error('scraping_jobs 업데이트 실패:', error);
       }
