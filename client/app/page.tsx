@@ -69,6 +69,7 @@ export default function Home() {
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [selectedPortals, setSelectedPortals] = useState<string[]>(['naver', 'kakao', 'yanolja', 'agoda', 'google']);
   const [breakpointMode, setBreakpointMode] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
   const [progressLog, setProgressLog] = useState<string[]>([]);
   const [waitingForContinue, setWaitingForContinue] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(true);
@@ -234,6 +235,7 @@ export default function Home() {
         companyName: companyName.trim() || null, // 특정 기업만 스크랩 (빈 값이면 전체)
         portals: selectedPortals.length > 0 ? selectedPortals : null, // 선택된 포털 (빈 배열이면 null = 전체)
         breakpointMode: breakpointMode, // 디버그: 단계마다 클릭하여 진행
+        headed: showBrowser, // 디버그: 브라우저 창 표시 (로컬에서만 동작)
       };
       
       console.log(`[API] 작업 시작 요청: ${API_URL}/api/admin/jobs/start`);
@@ -514,6 +516,22 @@ export default function Home() {
             </p>
           </div>
 
+          {/* 디버그: 브라우저 화면 표시 */}
+          <div className={styles.filterSection}>
+            <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={showBrowser}
+                onChange={(e) => setShowBrowser(e.target.checked)}
+                disabled={loading || isRunning}
+                className={styles.radioInput}
+              />
+              <span>브라우저 화면 표시 (디버깅용)</span>
+            </label>
+            <p className={styles.filterDescription}>
+              체크 후 실행하면 Playwright 브라우저 창이 표시됩니다. 오류 확인에 유용합니다. 로컬 환경에서만 동작하며, Railway 등 원격 서버(디스플레이 없음)에서는 표시되지 않습니다.
+            </p>
+          </div>
           {/* 디버그: 단계마다 클릭하여 진행 (브레이크포인트) */}
           <div className={styles.filterSection}>
             <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>

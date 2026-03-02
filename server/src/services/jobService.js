@@ -222,12 +222,13 @@ class JobService {
     this.isRunning = true;
     this.cancelRequested = false;
     this.breakpointMode = options.breakpointMode === true;
+    const wantHeadedOption = options.headed === true;
     this.clearProgressLog();
     let job = null;
     let scraper = null;
 
     try {
-      this.appendProgressLog(`작업 시작 - dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}${this.breakpointMode ? ' [브레이크포인트 모드]' : ''}`);
+      this.appendProgressLog(`작업 시작 - dateFilter: ${dateFilter}, companyName: ${companyName || '전체'}, portals: ${portals ? JSON.stringify(portals) : '전체'}${this.breakpointMode ? ' [브레이크포인트 모드]' : ''}${wantHeadedOption ? ' [브라우저 화면 표시]' : ''}`);
       this.requirePool();
       job = await this.createJob();
       this.currentJob = job;
@@ -245,11 +246,10 @@ class JobService {
 
       this.appendProgressLog('브라우저 초기화 중...');
       console.log(`[작업 시작] 브라우저 초기화 시작...`);
-      // 브라우저 화면 표시: PLAYWRIGHT_HEADED=1 이거나 개발 모드(NODE_ENV !== 'production')면 headed
-      // headless는 구글 등에서 리뷰가 덜 로드될 수 있으므로 개발 시에는 화면 보이도록 기본 설정
-      const wantHeaded = process.env.PLAYWRIGHT_HEADED === '1' || process.env.NODE_ENV !== 'production';
+      // 브라우저 화면 표시: 요청 옵션(headed) > PLAYWRIGHT_HEADED=1 > 개발 모드(NODE_ENV !== 'production')
+      const wantHeaded = wantHeadedOption || process.env.PLAYWRIGHT_HEADED === '1' || process.env.NODE_ENV !== 'production';
       await scraper.init({ headless: !wantHeaded });
-      console.log(`[작업 시작] 브라우저 초기화 완료`);
+      console.log(`[작업 시작] 브라우저 초기화 완료 (headless: ${!wantHeaded})`);
       this.appendProgressLog(wantHeaded ? '브라우저 초기화 완료 (작업 화면 표시 모드)' : '브라우저 초기화 완료');
 
       // companies 테이블에서 기업 목록 조회

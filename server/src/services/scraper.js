@@ -1573,14 +1573,12 @@ class ScraperService {
               }
               
               // 날짜 필터링: week 또는 twoWeeks 모드일 때 필터링 (KST 기준)
-              // 최신순으로 정렬되어 있으므로, 필터 범위를 벗어난 날짜를 만나면 이후 모든 리뷰도 범위를 벗어남
+              // 범위 밖 날짜를 만나면 이 리뷰만 스킵하고 계속 진행. 같은 페이지 내 범위 안 리뷰는 모두 처리 후, 배열 끝나면 종료
               if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDateStr && date) {
                 if (date < filterDateStr) {
-                  // 필터 범위를 벗어난 날짜를 만남
-                  console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
-                  console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
-                  shouldStop = true;
-                  break; // 루프 종료
+                  console.log(`[네이버맵] 날짜 필터 범위 벗어남 (이 리뷰 스킵, 나머지 처리 후 종료): ${date} < ${filterDateStr}`);
+                  shouldStop = true; // 이 페이지 처리 완료 후 더보기 중단
+                  continue; // 이 리뷰만 건너뛰고 다음 리뷰 계속 처리
                 }
               }
               
@@ -1828,11 +1826,9 @@ class ScraperService {
                     const dateStrForFilter = typeof date === 'string' ? date : (date instanceof Date ? date.toISOString().slice(0, 10) : null);
                     if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && dateStrForFilter && filterDateStr) {
                       if (dateStrForFilter < filterDateStr) {
-                        // 필터 범위를 벗어난 날짜를 만남
-                        console.log(`[네이버맵] 날짜 필터 범위를 벗어남: ${date} < ${filterDateStr}`);
-                        console.log(`[네이버맵] 최신순 정렬이므로 이후 모든 리뷰도 범위를 벗어남. 자료수집 종료.`);
+                        console.log(`[네이버맵] 날짜 필터 범위 벗어남 (이 리뷰 스킵, 나머지 처리 후 종료): ${dateStrForFilter} < ${filterDateStr}`);
                         shouldSave = false;
-                        shouldStop = true; // 루프 종료 플래그 설정
+                        shouldStop = true; // 이 페이지 처리 완료 후 더보기 중단
                       }
                     }
                     
@@ -1881,10 +1877,8 @@ class ScraperService {
                         }
                       }
                     } else {
-                      // 날짜 필터링으로 스킵된 경우
-                      reviews.push(reviewData);
-                      // shouldStop이 true이면 루프 종료
-                      break;
+                      // 날짜 필터링으로 이 리뷰만 스킵, 나머지 리뷰는 계속 처리
+                      continue;
                     }
                   } catch (saveError) {
                     console.error(`[네이버맵] 리뷰 ${i + 1} 즉시 저장 실패:`, saveError.message);
@@ -1910,14 +1904,9 @@ class ScraperService {
               } catch (err) {
                 console.error(`리뷰 ${i + 1} 추출 오류:`, err.message);
               }
-              
-              // 날짜 필터링으로 종료해야 하는 경우
-              if (shouldStop) {
-                break;
-              }
             }
             
-            // 날짜 필터링으로 종료해야 하는 경우
+            // 현재 페이지의 모든 리뷰 처리 완료 후, 날짜 필터로 종료 예정이면 더보기 중단
             if (shouldStop) {
               break;
             }

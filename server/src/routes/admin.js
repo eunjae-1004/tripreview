@@ -39,8 +39,8 @@ router.post('/jobs/start', async (req, res) => {
       return res.status(400).json({ error: '이미 실행 중인 작업이 있습니다.' });
     }
 
-    // 날짜 필터 옵션 (기본값: 'week'), breakpointMode: 디버그 시 단계마다 클릭하여 진행
-    const { dateFilter = 'week', companyName = null, portals = null, breakpointMode = false } = req.body;
+    // 날짜 필터 옵션 (기본값: 'week'), breakpointMode: 디버그 시 단계마다 클릭하여 진행, headed: 브라우저 화면 표시
+    const { dateFilter = 'week', companyName = null, portals = null, breakpointMode = false, headed = false } = req.body;
     
     if (dateFilter !== 'all' && dateFilter !== 'week' && dateFilter !== 'twoWeeks') {
       return res.status(400).json({ error: 'dateFilter는 "all", "week", "twoWeeks" 중 하나여야 합니다.' });
@@ -64,7 +64,10 @@ router.post('/jobs/start', async (req, res) => {
     console.log(`[작업 시작] dateFilter: ${dateFilter}, companyName: ${companyName || 'null'}, portals: ${portals ? JSON.stringify(portals) : 'null'}`);
 
     // 비동기로 실행 (응답은 즉시 반환)
-    jobService.runScrapingJob(dateFilter, companyName, portals, { breakpointMode: breakpointMode === true }).catch((error) => {
+    jobService.runScrapingJob(dateFilter, companyName, portals, {
+      breakpointMode: breakpointMode === true,
+      headed: headed === true,
+    }).catch((error) => {
       console.error('스크래핑 작업 실행 오류:', error);
     });
 
