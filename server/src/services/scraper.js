@@ -514,27 +514,53 @@ class ScraperService {
       }
 
       const currentBefore = this.page.url();
+      let targetUrl = naverMapUrl.replace(/\?.*$/, '');
+      if (!targetUrl.includes('placePath=')) {
+        targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'placePath=%2Freview';
+      }
       if (currentBefore.includes('map.naver.com')) {
         console.log(`[네이버맵 상세] 2단계: 이미 map 페이지에 있음`);
       } else {
-        console.log(`[네이버맵 상세] 2단계: 네이버맵 페이지로 이동...`);
-        await this.page.goto(naverMapUrl.replace(/\?.*$/, ''), { waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log(`[네이버맵 상세] 2단계: 네이버맵 페이지로 이동 (placePath=review)...`);
+        await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await this.page.waitForTimeout(5000);
       }
       
       console.log(`[네이버맵 상세] 2단계 완료: 네이버맵 페이지 도착, URL=${this.page.url()}`);
-      // 네이버맵 페이지 로딩 대기
-      await this.page.waitForTimeout(3000);
+      // 네이버맵 페이지 로딩 대기 (place 패널/iframe 비동기 로드 대비)
+      await this.page.waitForTimeout(5000);
 
-      // iframe 찾기 (네이버맵은 iframe을 사용)
+      // iframe 찾기 (네이버맵 place 패널은 iframe 사용, 선택자/타이틀 변경 대비)
       let frame = this.page;
-      const iframeLocator = this.page.locator('iframe[title="Naver Place Entry"]');
-      
-      try {
-        console.log(`[네이버맵 상세] 3단계: iframe[title="Naver Place Entry"] 대기...`);
-        await iframeLocator.waitFor({ state: 'attached', timeout: 5000 });
-        frame = await iframeLocator.contentFrame();
-        console.log(`[네이버맵 상세] 3단계 완료: iframe 로드됨`);
+      const iframeSelectors = [
+        'iframe[title="Naver Place Entry"]',
+        'iframe[title*="Naver Place"]',
+        'iframe[title*="place"]',
+        'iframe[src*="map.naver.com"][src*="entry"]',
+        'iframe#entryIframe',
+        'iframe[src*="naver"]',
+      ];
+      let iframeFound = false;
+      for (const sel of iframeSelectors) {
+        try {
+          const loc = this.page.locator(sel).first();
+          if (await loc.count() > 0) {
+            await loc.waitFor({ state: 'attached', timeout: 8000 });
+            frame = await loc.contentFrame();
+            if (frame) {
+              console.log(`[네이버맵 상세] 3단계 완료: iframe 발견 (${sel})`);
+              iframeFound = true;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+      if (!iframeFound) {
+        console.log(`[네이버맵 상세] 3단계: iframe 미발견, 메인 페이지(frame=page)로 진행`);
+        frame = this.page;
+      }
+
+      if (iframeFound) {
         
         // 리뷰 탭 클릭 (있는 경우)
         try {
@@ -562,20 +588,16 @@ class ScraperService {
           } else {
             console.log('⚠️ 최신순 정렬 버튼을 찾을 수 없습니다.');
           }
-      } catch (e) {
-        console.log(`⚠️ 최신순 정렬 실패: ${e.message}`);
+        } catch (e) {
+          console.log(`⚠️ 최신순 정렬 실패: ${e.message}`);
         }
-      } catch (e) {
-        // iframe이 없으면 메인 페이지에서 진행
-        console.log(`[네이버맵 상세] 3단계: iframe 없음 (${e.message}) → 메인 페이지(frame=page)로 진행`);
-        frame = this.page;
       }
 
       // 리뷰 목록이 DOM에 로드될 때까지 대기 (수집 전 필수)
       if (frame && typeof frame.locator === 'function') {
         try {
-          await frame.locator('ul#_review_list').waitFor({ state: 'attached', timeout: 10000 });
-          await this.page.waitForTimeout(2500);
+          await frame.locator('ul#_review_list').waitFor({ state: 'attached', timeout: 15000 });
+          await this.page.waitForTimeout(3000);
           // 리뷰 항목이 하나라도 나타날 때까지 추가 대기 (lazy 렌더링 대비)
           try {
             await frame.locator('ul#_review_list li').first().waitFor({ state: 'visible', timeout: 8000 });
