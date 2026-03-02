@@ -790,6 +790,13 @@ class ScraperService {
               }
               if (!reviewDate) { naverNoDateSkipCount++; skippedNoDate = true; }
 
+              // 날짜 필터링: 범위 밖이면 이 리뷰만 스킵, 나머지 처리 후 종료 (한 페이지 전체 처리)
+              if ((dateFilter === 'week' || dateFilter === 'twoWeeks') && filterDateStr && reviewDate && reviewDate < filterDateStr) {
+                console.log(`[네이버맵] 날짜 필터 범위 벗어남 (이 리뷰 스킵, 나머지 처리 후 종료): ${reviewDate} < ${filterDateStr}`);
+                shouldStop = true;
+                continue;
+              }
+
               let content = '';
               try {
                 const contentEl = container.locator('[class*="comment"], [class*="text"], [class*="content"], .pui__vzH5F').first();
@@ -811,6 +818,8 @@ class ScraperService {
               }
             }
             processedReviewIndex = currentPageReviewCount;
+
+            if (shouldStop) break;
 
             // 리뷰 목록 더보기(다음 페이지): 리스트 하단 버튼만 클릭 (각 리뷰 본문 "더보기"와 구분)
             // 네이버맵 UI 변경 시 선택자는 개발자 도구로 재확인 필요. 아래 순서로 시도
