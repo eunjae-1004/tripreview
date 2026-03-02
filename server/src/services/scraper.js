@@ -472,44 +472,59 @@ class ScraperService {
       await this.page.waitForTimeout(5000); // 검색 결과 로딩 대기
       console.log(`[네이버맵 상세] 1단계 완료: 현재 URL=${this.page.url()}`);
       
-      // 2단계: map.naver.com 링크 우선 검색 (선택자 변경에 덜 민감), 없으면 더보기 버튼 시도
-      console.log(`[네이버맵 상세] 2단계: map.naver.com 링크 검색 (우선)...`);
+      // 2단계: 더보기(리뷰 정보 보기) 버튼 우선 - 스크롤 후 클릭 (이전 정상 동작 방식)
+      console.log(`[네이버맵 상세] 2단계: 더보기 버튼 찾는 중...`);
+      const moreButtonSelectors = [
+        '#place-main-section-root > section:nth-child(1) > div > div.mod_more_wrap > a',
+        '#place-main-section-root > section:nth-child(1) > div > div:nth-child(5) > a',
+      ];
       let naverMapUrl = null;
+      let moreButton = null;
 
-      const mapLink = this.page.locator('a[href*="map.naver.com"]').first();
-      const mapLinkCount = await mapLink.count();
-      if (mapLinkCount > 0) {
-        const mapUrl = await mapLink.getAttribute('href').catch(() => null);
-        if (mapUrl) {
-          naverMapUrl = mapUrl.startsWith('/') ? `https://map.naver.com${mapUrl}` : (mapUrl.startsWith('http') ? mapUrl : `https://map.naver.com/${mapUrl}`);
-          console.log(`[네이버맵 상세] 2단계: map 링크 발견 (${mapLinkCount}개) → 이동`);
-        }
-      }
+      // 리뷰 정보 보기가 중간쯤에 있으므로 스크롤
+      try {
+        await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+        await this.page.waitForTimeout(1500);
+      } catch (_) {}
 
-      if (!naverMapUrl) {
-        console.log(`[네이버맵 상세] 2단계: map 링크 없음 → 더보기 버튼 시도`);
-        const moreSelectors = [
-          '#place-main-section-root > section:nth-child(1) > div > div:nth-child(5) > a',
-          '#place-main-section-root a[href*="/place/"]',
-          '#place-main-section-root a[href*="map.naver.com"]',
-        ];
-        for (const sel of moreSelectors) {
-          try {
-            const btn = this.page.locator(sel).first();
-            if (await btn.count() > 0 && (await btn.isVisible().catch(() => false))) {
-              const href = await btn.getAttribute('href').catch(() => null);
-              if (href && (href.includes('map.naver.com') || href.includes('/place/'))) {
-                naverMapUrl = href.startsWith('/') ? `https://map.naver.com${href}` : (href.startsWith('http') ? href : `https://map.naver.com/${href}`);
-                console.log(`[네이버맵 상세] 2단계: 더보기 선택자 성공 (${sel.slice(0, 50)}...)`);
-                break;
-              }
+      for (const sel of moreButtonSelectors) {
+        try {
+          const btn = this.page.locator(sel).first();
+          if (await btn.count() > 0) {
+            await btn.waitFor({ state: 'visible', timeout: 10000 });
+            const buttonHref = await btn.getAttribute('href').catch(() => null);
+            if (buttonHref && (buttonHref.includes('map.naver.com') || buttonHref.includes('/place/'))) {
+              naverMapUrl = buttonHref.startsWith('/') ? `https://map.naver.com${buttonHref}` : (buttonHref.startsWith('http') ? buttonHref : `https://map.naver.com/${buttonHref}`);
+              moreButton = btn;
+              console.log(`[네이버맵 상세] 2단계: 더보기 버튼 발견 (${sel.includes('mod_more_wrap') ? 'mod_more_wrap' : 'nth-child(5)'})`);
+              break;
             }
-          } catch (_) {}
+          }
+        } catch (_) {}
+      }
+
+      if (!naverMapUrl) {
+        console.log(`[네이버맵 상세] 2단계: 더보기 href 없음 → map.naver.com 링크 fallback`);
+        const mapLinks = await this.page.locator('a[href*="map.naver.com"]').all();
+        for (const el of mapLinks) {
+          const href = await el.getAttribute('href').catch(() => null);
+          if (href && href.includes('/entry/place/')) {
+            naverMapUrl = href.startsWith('/') ? `https://map.naver.com${href}` : (href.startsWith('http') ? href : `https://map.naver.com/${href}`);
+            console.log(`[네이버맵 상세] 2단계: map 링크(entry/place) fallback 발견`);
+            break;
+          }
+        }
+        if (!naverMapUrl && mapLinks.length > 0) {
+          const firstHref = await mapLinks[0].getAttribute('href').catch(() => null);
+          if (firstHref) {
+            naverMapUrl = firstHref.startsWith('/') ? `https://map.naver.com${firstHref}` : (firstHref.startsWith('http') ? firstHref : `https://map.naver.com/${firstHref}`);
+            console.log(`[네이버맵 상세] 2단계: map 링크 fallback (첫 번째)`);
+          }
         }
       }
 
       if (!naverMapUrl) {
-        console.log(`[네이버맵 상세] 2단계 실패: map 링크/더보기 모두 미발견 → 스크래핑 건너뜀`);
+        console.log(`[네이버맵 상세] 2단계 실패: 더보기/map 링크 모두 미발견 → 스크래핑 건너뜀`);
         return [];
       }
 
@@ -518,10 +533,28 @@ class ScraperService {
       if (!targetUrl.includes('placePath=')) {
         targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'placePath=%2Freview';
       }
+
       if (currentBefore.includes('map.naver.com')) {
         console.log(`[네이버맵 상세] 2단계: 이미 map 페이지에 있음`);
+      } else if (moreButton) {
+        try {
+          await moreButton.click({ timeout: 5000 });
+          await this.page.waitForTimeout(3000);
+          const afterUrl = this.page.url();
+          if (!afterUrl.includes('map.naver.com')) {
+            console.log(`[네이버맵 상세] 2단계: 클릭 미이동 → goto로 직접 이동`);
+            await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await this.page.waitForTimeout(5000);
+          } else {
+            console.log(`[네이버맵 상세] 2단계 완료: 클릭으로 이동 성공`);
+          }
+        } catch (e) {
+          console.log(`[네이버맵 상세] 2단계: 클릭 예외 (${e.message}) → goto로 이동`);
+          await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+          await this.page.waitForTimeout(5000);
+        }
       } else {
-        console.log(`[네이버맵 상세] 2단계: 네이버맵 페이지로 이동 (placePath=review)...`);
+        console.log(`[네이버맵 상세] 2단계: goto로 네이버맵 페이지 이동`);
         await this.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await this.page.waitForTimeout(5000);
       }
