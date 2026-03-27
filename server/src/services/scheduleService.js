@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import jobService from './jobService.js';
 
 let scheduleTask = null;
-let scheduleEnabled = true; // 기본값: 활성화
+let scheduleEnabled = false; // 기본값: 비활성화 (사용자가 명시적으로 켤 때만 활성화)
 
 /**
  * 스케줄 서비스 초기화 (index.js에서 호출)
