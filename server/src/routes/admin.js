@@ -107,6 +107,7 @@ router.post('/jobs/stop', async (req, res) => {
  */
 router.get('/jobs/status', async (req, res) => {
   try {
+    await jobService.reconcileStaleRunningFlag();
     const currentJob = await jobService.getCurrentJob();
     const isRunning = jobService.getIsRunning();
     const progress = jobService.getProgress ? jobService.getProgress() : null;

@@ -617,6 +617,38 @@ class JobService {
   getIsRunning() {
     return this.isRunning;
   }
+
+  /**
+   * DB에 status=running 인 행이 없는데 메모리만 isRunning=true 인 경우 정리
+   * (수동으로 DB 수정, Railway 재시작 직후, 프로세스 비정상 종료 등)
+   */
+  async reconcileStaleRunningFlag() {
+    if (!pool) return;
+    try {
+      const result = await pool.query(
+        "SELECT id FROM scraping_jobs WHERE status = 'running' ORDER BY started_at DESC LIMIT 1"
+      );
+      if (result.rows.length === 0 && this.isRunning) {
+        console.warn(
+          '[jobService] DB에 running 작업이 없는데 메모리 isRunning=true → 플래그 정리'
+        );
+        this.isRunning = false;
+        this.currentJob = null;
+        this.cancelRequested = false;
+        this.currentProgress = null;
+        this.waitingForContinue = false;
+        this.scraper = null;
+        if (this.continueResolve) {
+          try {
+            this.continueResolve();
+          } catch (_) {}
+          this.continueResolve = null;
+        }
+      }
+    } catch (e) {
+      console.error('[jobService] reconcileStaleRunningFlag 실패:', e.message);
+    }
+  }
 }
 
 export default new JobService();
