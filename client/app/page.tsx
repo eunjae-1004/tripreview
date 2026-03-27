@@ -760,41 +760,9 @@ export default function Home() {
                       <span className={styles.companyType}>{company.type}</span>
                     </div>
                     <div className={styles.companyInfo}>
-                      <div className={styles.portalUrls}>
-                        <div className={styles.portalItem}>
-                          <span className={styles.portalLabel}>네이버맵:</span>
-                          <span className={styles.portalStatus}>
-                            {company.naver_url ? '✅' : '❌'}
-                          </span>
-                        </div>
-                        <div className={styles.portalItem}>
-                          <span className={styles.portalLabel}>카카오맵:</span>
-                          <span className={styles.portalStatus}>
-                            {company.kakao_url ? '✅' : '❌'}
-                          </span>
-                        </div>
-                        <div className={styles.portalItem}>
-                          <span className={styles.portalLabel}>야놀자:</span>
-                          <span className={styles.portalStatus}>
-                            {company.yanolja_url ? '✅' : '❌'}
-                          </span>
-                        </div>
-                        <div className={styles.portalItem}>
-                          <span className={styles.portalLabel}>아고다:</span>
-                          <span className={styles.portalStatus}>
-                            {company.agoda_url ? '✅' : '❌'}
-                          </span>
-                        </div>
-                        <div className={styles.portalItem}>
-                          <span className={styles.portalLabel}>구글:</span>
-                          <span className={styles.portalStatus}>
-                            {company.google_url ? '✅' : '❌'}
-                          </span>
-                        </div>
-                      </div>
-                      {totalCompanyReviews > 0 && (
-                        <div className={styles.companyReviews}>
-                          <strong>저장된 리뷰: {totalCompanyReviews}개</strong>
+                      <div className={styles.companyReviews}>
+                        <strong>저장된 리뷰: {totalCompanyReviews}개</strong>
+                        {companyStats.length > 0 ? (
                           <div className={styles.portalBreakdown}>
                             {companyStats.map((stat) => (
                               <span key={stat.portal_url} className={styles.portalStat}>
@@ -802,8 +770,12 @@ export default function Home() {
                               </span>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className={styles.empty} style={{ marginTop: 8, marginBottom: 0 }}>
+                            포털별 저장 건수 없음
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
